@@ -141,16 +141,6 @@ See `backend/.env.example` for the full list. Required:
 
 ---
 
-## Roadmap / Known Gaps
-
-- [ ] "Add Team Member" page (currently only via API/curl)
-- [ ] Change Password UI
-- [ ] Mobile-responsive polish for Inventory table
-- [ ] Production deployment (frontend + backend hosting)
-- [ ] Firestore security rules hardening for production
-
----
-
 ## Security Notes
 
 - This is an **internal business tool**, not a public-facing app — there is intentionally no public registration.
