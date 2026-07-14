@@ -1,0 +1,241 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Sign In - Colour Your Drape</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&amp;family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#584045",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#ffb1c2",
+                    "on-background": "#241914",
+                    "surface-container": "#ffeae0",
+                    "secondary-fixed": "#ffe08e",
+                    "secondary-fixed-dim": "#ecc246",
+                    "error": "#ba1a1a",
+                    "secondary": "#755b00",
+                    "surface-bright": "#fff8f6",
+                    "on-surface": "#241914",
+                    "tertiary": "#004e42",
+                    "surface-container-high": "#f9e4db",
+                    "on-tertiary-fixed": "#00201b",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed": "#3f0018",
+                    "primary-fixed-dim": "#ffb1c2",
+                    "surface-dim": "#ead6cd",
+                    "inverse-surface": "#3a2e28",
+                    "surface-container-low": "#fff1eb",
+                    "surface-tint": "#b51a57",
+                    "on-primary-fixed-variant": "#8f0040",
+                    "surface": "#fff8f6",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#f3ded5",
+                    "outline": "#8c7075",
+                    "on-secondary-container": "#735a00",
+                    "tertiary-fixed": "#9af3df",
+                    "primary-container": "#b21755",
+                    "on-secondary-fixed": "#241a00",
+                    "inverse-on-surface": "#ffede5",
+                    "on-tertiary-fixed-variant": "#005045",
+                    "secondary-container": "#fed255",
+                    "primary": "#8c003f",
+                    "on-secondary": "#ffffff",
+                    "on-primary-container": "#ffc7d2",
+                    "tertiary-container": "#006859",
+                    "on-error-container": "#93000a",
+                    "background": "#fff8f6",
+                    "surface-variant": "#f3ded5",
+                    "on-tertiary-container": "#8de5d1",
+                    "primary-fixed": "#ffd9e0",
+                    "outline-variant": "#e0bec4",
+                    "tertiary-fixed-dim": "#7ed6c3",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#584400"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "gutter": "24px",
+                    "base": "8px",
+                    "sm": "12px",
+                    "xs": "4px",
+                    "lg": "48px",
+                    "container-max": "1280px",
+                    "xl": "80px"
+            },
+            "fontFamily": {
+                    "display-lg-mobile": [
+                            "Playfair Display"
+                    ],
+                    "body-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "label-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-sm": [
+                            "Playfair Display"
+                    ],
+                    "body-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "display-lg": [
+                            "Playfair Display"
+                    ],
+                    "headline-md": [
+                            "Playfair Display"
+                    ]
+            },
+            "fontSize": {
+                    "display-lg-mobile": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-sm": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "600"
+                            }
+                    }
+            },
+          }
+        }
+    </script>
+<style>
+        /* Ambient Soft Shadow from Style Guidance */
+        .shadow-ambient {
+            box-shadow: 0px 4px 20px rgba(58, 46, 40, 0.08);
+        }
+        .material-symbols-outlined {
+          font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex items-center justify-center p-4 md:p-gutter font-body-md text-on-background antialiased selection:bg-primary-container selection:text-white">
+<!-- Linear/Transactional Screen: No Navigations Rendered -->
+<main class="w-full max-w-[420px]">
+<!-- Centered White Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-ambient p-8 md:p-10 flex flex-col relative overflow-hidden">
+<!-- Subtle top border accent to hint at premium brand -->
+<div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary-container via-primary-container to-tertiary-container opacity-80"></div>
+<!-- Logo Area -->
+<div class="flex justify-center mb-10">
+<img alt="Colour Your Drape Logo" class="h-[48px] w-auto object-contain rounded-full shadow-sm ring-1 ring-outline-variant/30" src="https://lh3.googleusercontent.com/aida/AP1WRLsrEbXdQGbVUiJFS_OxXPeni_DzUkTRmONlbfY8xEjE77DCjepJz0qea9iwpRXUchUj29f9tJG31TDNk5LdH30n912norPPjSmeRpaCdYE8pF5N3Wkr5joGv_SG7G5gn8fynHPcldkDAlZNSbrNwgOoF_bJ07J_hs70X-wnuAUhFlb68UpxonVDxDWDnTZUN0vM28fkN4FIF1EgiTaRfPooFNQFbjn-dQNsC3x_CrvTrcShxfS7TG3unjo">
+</div>
+<!-- Welcome Text -->
+<div class="text-center mb-8">
+<h1 class="font-headline-md text-headline-md text-on-background mb-2">Welcome Back</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Sign in to access your artisanal collection.</p>
+</div>
+<!-- Form -->
+<form action="#" class="flex flex-col gap-5" method="POST">
+<!-- Email Field -->
+<div>
+<label class="block font-label-md text-label-md text-on-background mb-2" for="email">Email Address</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-outline">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-background placeholder:text-outline-variant focus:outline-none focus:border-secondary-container focus:ring-1 focus:ring-secondary-container transition-colors duration-200" id="email" name="email" placeholder="Enter your email" required="" type="email">
+</div>
+</div>
+<!-- Password Field -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="block font-label-md text-label-md text-on-background" for="password">Password</label>
+<!-- Forgot Password Link -->
+<a class="font-label-md text-label-md text-secondary hover:text-secondary-fixed-dim hover:underline transition-colors duration-200" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-outline">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+</span>
+<input class="w-full pl-10 pr-10 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-background placeholder:text-outline-variant focus:outline-none focus:border-secondary-container focus:ring-1 focus:ring-secondary-container transition-colors duration-200" id="password" name="password" placeholder="Enter your password" required="" type="password">
+<button aria-label="Toggle password visibility" class="absolute inset-y-0 right-0 flex items-center pr-3 text-outline hover:text-on-background transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Actions -->
+<div class="pt-4">
+<button class="w-full py-3.5 px-4 bg-primary-container text-white font-label-md text-label-md rounded-lg shadow-sm hover:shadow-md hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200 flex justify-center items-center gap-2" type="submit">
+<span>Sign In</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<div class="text-center mt-4">
+<p class="font-body-md text-body-md text-on-surface-variant">Don't have an account? <a class="text-primary hover:underline font-label-md" href="#">Create one</a></p>
+</div>
+</form>
+</div>
+<!-- Trust Indicators / Footer Minimal -->
+<div class="mt-8 text-center flex items-center justify-center gap-2 opacity-60">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">verified_user</span>
+<span class="font-label-md text-label-md text-on-surface-variant text-xs">Secure Artisan Portal</span>
+</div>
+</main>
+</body></html>

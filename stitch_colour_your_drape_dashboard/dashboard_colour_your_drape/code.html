@@ -1,0 +1,501 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Colour Your Drape - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#584045",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#ffb1c2",
+                        "on-background": "#241914",
+                        "surface-container": "#ffeae0",
+                        "secondary-fixed": "#ffe08e",
+                        "secondary-fixed-dim": "#ecc246",
+                        "error": "#ba1a1a",
+                        "secondary": "#755b00",
+                        "surface-bright": "#fff8f6",
+                        "on-surface": "#241914",
+                        "tertiary": "#004e42",
+                        "surface-container-high": "#f9e4db",
+                        "on-tertiary-fixed": "#00201b",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#3f0018",
+                        "primary-fixed-dim": "#ffb1c2",
+                        "surface-dim": "#ead6cd",
+                        "inverse-surface": "#3a2e28",
+                        "surface-container-low": "#fff1eb",
+                        "surface-tint": "#b51a57",
+                        "on-primary-fixed-variant": "#8f0040",
+                        "surface": "#fff8f6",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#f3ded5",
+                        "outline": "#8c7075",
+                        "on-secondary-container": "#735a00",
+                        "tertiary-fixed": "#9af3df",
+                        "primary-container": "#b21755",
+                        "on-secondary-fixed": "#241a00",
+                        "inverse-on-surface": "#ffede5",
+                        "on-tertiary-fixed-variant": "#005045",
+                        "secondary-container": "#fed255",
+                        "primary": "#8c003f",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#ffc7d2",
+                        "tertiary-container": "#006859",
+                        "on-error-container": "#93000a",
+                        "background": "#F5EFDC", // Custom requested background mapped here for tailwind usage
+                        "surface-variant": "#f3ded5",
+                        "on-tertiary-container": "#8de5d1",
+                        "primary-fixed": "#ffd9e0",
+                        "outline-variant": "#e0bec4",
+                        "tertiary-fixed-dim": "#7ed6c3",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#584400"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "sm": "12px",
+                        "xs": "4px",
+                        "lg": "48px",
+                        "container-max": "1280px",
+                        "xl": "80px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Playfair Display"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "headline-sm": ["Playfair Display"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "display-lg": ["Playfair Display"],
+                        "headline-md": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-card {
+            background-color: #FFFDF8;
+            box-shadow: 0px 4px 20px rgba(58, 46, 40, 0.08);
+            border-radius: 16px;
+        }
+        .gold-border {
+            border: 1px solid #C9A227;
+        }
+        .text-magenta { color: #B21755; }
+        .bg-magenta { background-color: #B21755; }
+        .text-gold { color: #C9A227; }
+        .bg-gold { background-color: #C9A227; }
+        
+        .table-row-card {
+            @media (max-width: 768px) {
+                display: block;
+                background-color: #FFFDF8;
+                border-left: 4px solid #C9A227;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                border-radius: 8px;
+                box-shadow: 0px 2px 10px rgba(58, 46, 40, 0.05);
+            }
+        }
+        .table-cell-card {
+            @media (max-width: 768px) {
+                display: flex;
+                justify-content: space-between;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #EAEAEA;
+            }
+            @media (max-width: 768px) {
+                &:last-child {
+                    border-bottom: none;
+                }
+            }
+        }
+        .table-header-hidden {
+             @media (max-width: 768px) {
+                 display: none;
+             }
+        }
+        body { background-color: #F5EFDC; }
+    </style>
+</head>
+<body class="font-body-md text-on-background min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface-container-lowest dark:bg-background docked full-width top-0 flat no shadows border-b border-surface-variant z-50 sticky">
+<div class="flex justify-between items-center w-full px-gutter max-w-container-max mx-auto h-20">
+<div class="flex items-center gap-md">
+<button class="md:hidden text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex items-center gap-sm">
+<img alt="Colour Your Drape Logo" class="h-10 w-10 rounded-full gold-border object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLsrEbXdQGbVUiJFS_OxXPeni_DzUkTRmONlbfY8xEjE77DCjepJz0qea9iwpRXUchUj29f9tJG31TDNk5LdH30n912norPPjSmeRpaCdYE8pF5N3Wkr5joGv_SG7G5gn8fynHPcldkDAlZNSbrNwgOoF_bJ07J_hs70X-wnuAUhFlb68UpxonVDxDWDnTZUN0vM28fkN4FIF1EgiTaRfPooFNQFbjn-dQNsC3x_CrvTrcShxfS7TG3unjo">
+<span class="font-display-lg-mobile text-display-lg-mobile text-primary dark:text-inverse-primary hidden md:block">Colour Your Drape</span>
+</div>
+</div>
+<!-- Web Navigation Links -->
+<nav class="hidden md:flex items-center gap-lg">
+<a class="text-primary dark:text-inverse-primary border-b-2 border-primary font-bold pb-1 text-label-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors duration-200 text-label-md" href="#">Orders</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors duration-200 text-label-md" href="#">Customers</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors duration-200 text-label-md" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-md">
+<button class="text-primary hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-primary hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img class="h-10 w-10 rounded-full border border-outline object-cover cursor-pointer hover:opacity-90" data-alt="A close up portrait of an elegant Indian woman wearing subtle traditional gold jewelry and a soft cream saree, representing a boutique owner or premium customer. Professional lighting, warm aesthetic, modern high-end studio portrait style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3dDqpSNn-vyFiomorIGq0Y_HmgQKWTnI1Jc2sarp5MAHsmR2eYvmF7tXgAZokitxDya-tpnGb6Mc58rPaGL0QyGzz82V_T6nP_tr6hBR9wfN8aJFpArbXhg4Cv4ZwoIqiXf4G2kW79UnzR7XQNRsPd0t3-najhPNdQZ_hBoy6DFCp8JPSlpzuCYfLgHYJTBDjNAD5J8k3HOJiEqPX1fDZ33vdsILGmAOYs8YSanGUJG9ZRVnifcV6">
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-gutter py-lg">
+<!-- Header & Filter -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-lg gap-md">
+<div>
+<h1 class="font-headline-md text-headline-md text-primary mb-xs">Dashboard Overview</h1>
+<p class="text-on-surface-variant font-body-md">Welcome back, here is your artisanal boutique's performance.</p>
+</div>
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest gold-border text-on-background py-2 pl-4 pr-10 rounded-md font-label-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm cursor-pointer">
+<option>Today</option>
+<option selected="">This Week</option>
+<option>This Month</option>
+<option>This Year</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-size: 20px;">expand_more</span>
+</div>
+</div>
+</div>
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-md mb-lg">
+<!-- Card 1 -->
+<div class="glass-card p-md border-t-[3px] border-primary-container relative overflow-hidden group">
+<div class="flex justify-between items-start mb-sm">
+<p class="text-on-surface-variant font-label-md">Total Sales</p>
+<div class="p-2 rounded-full gold-border bg-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" style="font-size: 20px;">payments</span>
+</div>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-background">₹1,24,500</h2>
+<p class="text-tertiary-container text-sm mt-xs flex items-center gap-1 font-label-md">
+<span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span> +12.5%
+                </p>
+</div>
+<!-- Card 2 -->
+<div class="glass-card p-md border-t-[3px] border-secondary-container relative overflow-hidden group">
+<div class="flex justify-between items-start mb-sm">
+<p class="text-on-surface-variant font-label-md">Total Profit</p>
+<div class="p-2 rounded-full gold-border bg-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary-container" style="font-size: 20px;">account_balance_wallet</span>
+</div>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-background">₹45,200</h2>
+<p class="text-tertiary-container text-sm mt-xs flex items-center gap-1 font-label-md">
+<span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span> +8.2%
+                </p>
+</div>
+<!-- Card 3 -->
+<div class="glass-card p-md border-t-[3px] border-tertiary-container relative overflow-hidden group">
+<div class="flex justify-between items-start mb-sm">
+<p class="text-on-surface-variant font-label-md">Total Orders</p>
+<div class="p-2 rounded-full gold-border bg-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary-container" style="font-size: 20px;">shopping_bag</span>
+</div>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-background">142</h2>
+<p class="text-error text-sm mt-xs flex items-center gap-1 font-label-md">
+<span class="material-symbols-outlined" style="font-size: 16px;">trending_down</span> -2.4%
+                </p>
+</div>
+<!-- Card 4 -->
+<div class="glass-card p-md border-t-[3px] border-outline relative overflow-hidden group">
+<div class="flex justify-between items-start mb-sm">
+<p class="text-on-surface-variant font-label-md">Avg Order Value</p>
+<div class="p-2 rounded-full gold-border bg-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-outline" style="font-size: 20px;">receipt_long</span>
+</div>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-background">₹8,560</h2>
+<p class="text-tertiary-container text-sm mt-xs flex items-center gap-1 font-label-md">
+<span class="material-symbols-outlined" style="font-size: 16px;">trending_up</span> +5.1%
+                </p>
+</div>
+<!-- Card 5 -->
+<div class="glass-card p-md border-t-[3px] border-error relative overflow-hidden group">
+<div class="flex justify-between items-start mb-sm">
+<p class="text-on-surface-variant font-label-md">Pending Deliveries</p>
+<div class="p-2 rounded-full gold-border bg-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-error" style="font-size: 20px;">local_shipping</span>
+</div>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-background">18</h2>
+<p class="text-on-surface-variant text-sm mt-xs font-label-md">Needs action</p>
+</div>
+</div>
+<!-- Charts Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-md mb-lg">
+<!-- Main Chart: Sales & Profit -->
+<div class="glass-card p-md lg:col-span-2 flex flex-col">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-on-background">Sales &amp; Profit Trend</h3>
+<button class="text-primary hover:opacity-80"><span class="material-symbols-outlined">more_horiz</span></button>
+</div>
+<div class="flex-grow w-full h-64 relative">
+<canvas id="salesChart"></canvas>
+</div>
+</div>
+<!-- Secondary Charts Stack -->
+<div class="flex flex-col gap-md">
+<!-- Donut Chart -->
+<div class="glass-card p-md flex-1 flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-background mb-md">Orders by Platform</h3>
+<div class="flex-grow relative h-40 flex justify-center items-center">
+<canvas id="platformChart"></canvas>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<span class="font-headline-sm text-on-background">Social</span>
+</div>
+</div>
+</div>
+<!-- Bar Chart -->
+<div class="glass-card p-md flex-1 flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-background mb-md">Top Selling Brands</h3>
+<div class="flex-grow relative h-40">
+<canvas id="brandsChart"></canvas>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Orders Table -->
+<div class="glass-card p-md overflow-hidden">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-on-background">Recent Orders</h3>
+<a class="text-primary font-label-md hover:underline flex items-center gap-1" href="#">View All <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span></a>
+</div>
+<div class="w-full">
+<div class="table-header-hidden grid grid-cols-5 gap-4 pb-sm border-b border-surface-variant font-label-md text-on-surface-variant mb-sm">
+<div>Order ID</div>
+<div>Customer</div>
+<div>Items</div>
+<div>Amount</div>
+<div>Status</div>
+</div>
+<div class="flex flex-col">
+<!-- Row 1 -->
+<div class="table-row-card grid md:grid-cols-5 gap-4 py-sm items-center border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-sm px-2 -mx-2">
+<div class="table-cell-card font-label-md text-on-background">
+<span class="md:hidden text-on-surface-variant">Order ID:</span>
+                            #ORD-7829
+                        </div>
+<div class="table-cell-card flex items-center gap-3">
+<span class="md:hidden text-on-surface-variant font-label-md">Customer:</span>
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover border border-outline-variant" data-alt="A small circular avatar of a sophisticated middle-aged Indian woman with dark hair pulled back, wearing small gold earrings. Warm lighting, cream background, professional portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBImovkxuXVeumYqz8jroEypfU_3Q7OPZfHhFCUmGR9kWYL1bAJy6tNsP18SXFXA46TMNFzlEYN3KzV9yWN_wbFnpK7XUwiXsf7VIZJQy-VnWT8I11Qw1wL-my5NpMojpyFN4KBQf6NJU9kMCwvhQFeo1JK7cuAKFDAO8CvACmjUTkhShGA11RHCzuzHnFMEOUPldSnbG_M3t8D1miJ4Ci_w2SWtg8GVJMnJkkzZ6_hmqx1iE2flxfc">
+<span class="font-body-md text-on-background">Meera Sharma</span>
+</div>
+</div>
+<div class="table-cell-card font-body-md text-on-surface-variant">
+<span class="md:hidden font-label-md">Items:</span>
+                             2x Kanjeevaram Silk
+                        </div>
+<div class="table-cell-card font-label-md text-on-background">
+<span class="md:hidden text-on-surface-variant">Amount:</span>
+                             ₹24,500
+                        </div>
+<div class="table-cell-card">
+<span class="md:hidden text-on-surface-variant font-label-md">Status:</span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#E6F4EA] text-[#1E8E3E] gold-border">Delivered</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="table-row-card grid md:grid-cols-5 gap-4 py-sm items-center border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-sm px-2 -mx-2">
+<div class="table-cell-card font-label-md text-on-background">
+<span class="md:hidden text-on-surface-variant">Order ID:</span>
+                            #ORD-7828
+                        </div>
+<div class="table-cell-card flex items-center gap-3">
+<span class="md:hidden text-on-surface-variant font-label-md">Customer:</span>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-label-md">AK</div>
+<span class="font-body-md text-on-background">Ananya Kapoor</span>
+</div>
+</div>
+<div class="table-cell-card font-body-md text-on-surface-variant">
+<span class="md:hidden font-label-md">Items:</span>
+                             1x Banarasi Brocade
+                        </div>
+<div class="table-cell-card font-label-md text-on-background">
+<span class="md:hidden text-on-surface-variant">Amount:</span>
+                             ₹18,200
+                        </div>
+<div class="table-cell-card">
+<span class="md:hidden text-on-surface-variant font-label-md">Status:</span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FFF3E0] text-[#E65100] gold-border">Pending</span>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="table-row-card grid md:grid-cols-5 gap-4 py-sm items-center border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-sm px-2 -mx-2">
+<div class="table-cell-card font-label-md text-on-background">
+<span class="md:hidden text-on-surface-variant">Order ID:</span>
+                            #ORD-7827
+                        </div>
+<div class="table-cell-card flex items-center gap-3">
+<span class="md:hidden text-on-surface-variant font-label-md">Customer:</span>
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover border border-outline-variant" data-alt="A small circular avatar of a young Indian professional woman with styled hair, warm smile, wearing a subtle pastel top. Cream background, professional portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9bdCMhoWQQEUEKmI2Wf7ZrHOLtZlg4hZQ06DZRdg0mom2HLgDwGtUL5qtldg9uiTEX21k2qRGoQBfp9dcLQqTNgBBNgOhDTdD4Pl-axfi-twemTPclIzY9oBEbJmYQ40Q_CyR2Vn6hCLGGcEyUTCIYCyvBYzi-yXqQJVXO8UwvooWNS9-mkX4OLCL1aqiWG3iMQPTkyCwvER5bGNIvCOgYx7U07Zj_c5SRFPQWBZW0yTiiNRLHjaF">
+<span class="font-body-md text-on-background">Priya Desai</span>
+</div>
+</div>
+<div class="table-cell-card font-body-md text-on-surface-variant">
+<span class="md:hidden font-label-md">Items:</span>
+                             3x Chanderi Cotton
+                        </div>
+<div class="table-cell-card font-label-md text-on-background">
+<span class="md:hidden text-on-surface-variant">Amount:</span>
+                             ₹12,400
+                        </div>
+<div class="table-cell-card">
+<span class="md:hidden text-on-surface-variant font-label-md">Status:</span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FCE8E6] text-[#D93025] gold-border">Returned</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Chart.js Configuration
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.color = "#584045"; // on-surface-variant
+
+        // 1. Sales & Profit Combo Chart
+        const ctxSales = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctxSales, {
+            type: 'bar',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [
+                    {
+                        label: 'Profit (₹)',
+                        data: [12000, 19000, 15000, 22000, 18000, 28000, 32000],
+                        type: 'line',
+                        borderColor: '#C9A227', // Gold
+                        backgroundColor: '#C9A227',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Sales (₹)',
+                        data: [35000, 42000, 38000, 55000, 48000, 65000, 72000],
+                        backgroundColor: '#B21755', // Magenta
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { position: 'top', align: 'end' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#e0bec4', tickLength: 0 },
+                        border: { dash: [4, 4] }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // 2. Orders by Platform Donut
+        const ctxPlatform = document.getElementById('platformChart').getContext('2d');
+        new Chart(ctxPlatform, {
+            type: 'doughnut',
+            data: {
+                labels: ['Instagram', 'WhatsApp', 'Website'],
+                datasets: [{
+                    data: [55, 30, 15],
+                    backgroundColor: ['#B21755', '#2E8B7A', '#C9A227'], // Magenta, Teal, Gold
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+
+        // 3. Top Brands Horizontal Bar
+        const ctxBrands = document.getElementById('brandsChart').getContext('2d');
+        new Chart(ctxBrands, {
+            type: 'bar',
+            data: {
+                labels: ['Kanjeevaram', 'Banarasi', 'Chanderi'],
+                datasets: [{
+                    data: [85, 65, 45],
+                    backgroundColor: ['#D9782D', '#2E8B7A', '#6B3FA0'], // Burnt Orange, Teal, Plum
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { display: false },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Deny all reads/writes by default — only the Express backend
+    // (using Firebase Admin SDK) can read/write.
+    // This prevents unauthenticated direct client access.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
