@@ -1,0 +1,355 @@
+/* ═══════════════════════════════════════════
+   Inventory Page Styles
+   ═══════════════════════════════════════════ */
+.inventory-page { padding-bottom: 40px; }
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+  gap: var(--space-md);
+}
+.inventory-header-text h1 { margin-bottom: 4px; }
+
+/* ─── Add Stock Button ─── */
+.inventory-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* ─── Add Stock Form Panel ─── */
+.inventory-form-panel {
+  margin-bottom: var(--space-md);
+  padding: var(--space-lg);
+  animation: fadeIn 0.3s ease-out;
+}
+.inventory-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-md);
+}
+.inv-span-2 { grid-column: span 2; }
+.inv-span-3 { grid-column: span 3; }
+.inventory-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-surface-variant);
+}
+
+/* ─── Inventory Filters ─── */
+.inventory-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface-bright);
+  border-radius: var(--radius-default);
+  border: 1px solid var(--color-gold);
+  box-shadow: var(--shadow-ambient);
+}
+.inv-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 280px;
+}
+.inv-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-outline);
+}
+.inv-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 40px;
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-full);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.inv-search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+.inv-filter-selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.inv-filter-select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-default);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+.inv-filter-select:focus {
+  border-color: var(--color-primary);
+}
+
+/* ─── Inventory Table (Desktop) ─── */
+.inventory-table-wrap {
+  padding: var(--space-md);
+  overflow: hidden;
+}
+.inventory-table-scroll { overflow-x: auto; }
+.inventory-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+.inventory-table thead tr {
+  background: rgba(255, 234, 224, 0.5);
+  border-bottom: 1px solid rgba(224, 190, 196, 0.3);
+}
+.inventory-table th {
+  padding: 14px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-on-surface-variant);
+}
+.inventory-table tbody tr {
+  border-bottom: 1px solid rgba(224, 190, 196, 0.2);
+  transition: background 0.2s;
+}
+.inventory-table tbody tr:hover {
+  background: var(--color-surface-container-lowest);
+}
+.inventory-table td {
+  padding: 14px 18px;
+  font-size: 14px;
+}
+.inv-name-cell {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.inv-qty-cell {
+  text-align: center;
+  font-weight: 600;
+}
+.inv-remaining-ok { color: var(--color-tertiary); }
+.inv-remaining-low { color: var(--color-gold); }
+.inv-remaining-out { color: var(--color-error); }
+
+/* Status Badges for Inventory */
+.badge-in-stock {
+  background-color: #E6F4EA;
+  color: #1E8E3E;
+  border: 1px solid #C4E5CC;
+}
+.badge-low-stock {
+  background-color: rgba(201, 162, 39, 0.12);
+  color: #755b00;
+  border: 1px solid rgba(201, 162, 39, 0.4);
+}
+.badge-out-of-stock {
+  background-color: #FCE8E6;
+  color: #D93025;
+  border: 1px solid #F5C6CB;
+}
+
+/* ─── Edit Drawer (reuses Orders drawer classes, extended) ─── */
+
+/* ─── Mobile Cards (hidden on desktop) ─── */
+.inventory-mobile-cards {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Mobile (< 768px)
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .inventory-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .inventory-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Form */
+  .inventory-form-panel { padding: var(--space-md) var(--space-sm); }
+  .inventory-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .inv-span-2, .inv-span-3 { grid-column: span 1; }
+
+  /* Filters */
+  .inventory-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
+  .inv-search-wrap {
+    min-width: auto;
+    width: 100%;
+  }
+  .inv-filter-selects {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+  .inv-filter-select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+    padding: 10px 32px 10px 10px;
+  }
+  .inv-filter-selects .btn-secondary {
+    grid-column: 1 / -1;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  /* Hide desktop table */
+  .inventory-desktop-only {
+    display: none !important;
+  }
+
+  /* Show mobile cards */
+  .inventory-mobile-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  /* ─── Mobile Inventory Card ─── */
+  .inv-mobile-card {
+    padding: 16px;
+    border-left: 4px solid var(--color-gold);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .inv-mobile-card:active {
+    transform: scale(0.985);
+    box-shadow: var(--shadow-interactive);
+  }
+
+  .inv-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .inv-card-name {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+  .inv-card-brand {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    margin-bottom: 4px;
+  }
+  .inv-card-supplier {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-on-surface-variant);
+    margin-bottom: 12px;
+  }
+
+  .inv-card-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-surface-container-lowest);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(224, 190, 196, 0.2);
+  }
+  .inv-card-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .inv-card-stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+  }
+  .inv-card-stat-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-on-surface);
+  }
+
+  .inv-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid rgba(224, 190, 196, 0.2);
+  }
+  .inv-card-prices {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--color-on-surface-variant);
+  }
+  .inv-card-price-tag {
+    font-weight: 600;
+    color: var(--color-secondary);
+  }
+  .inv-card-edit-btn {
+    padding: 6px;
+    color: var(--color-on-surface-variant);
+    background: var(--color-surface-container-lowest);
+    border: 1px solid var(--color-outline-variant);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    transition: all 0.2s;
+  }
+  .inv-card-edit-btn:active {
+    background: var(--color-primary-fixed);
+    color: var(--color-primary);
+  }
+
+  /* Edit drawer full-screen on mobile */
+  .inv-edit-drawer {
+    max-width: 100%;
+    width: 100%;
+    border-left: none;
+    border-radius: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Landscape mobile — 2-col cards
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) and (min-width: 500px) and (orientation: landscape),
+       (max-width: 900px) and (min-width: 500px) and (max-height: 500px) {
+  .inventory-mobile-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+}

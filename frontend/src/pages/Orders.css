@@ -1,0 +1,407 @@
+/* ═══════════════════════════════════════════
+   Orders Page Styles
+   ═══════════════════════════════════════════ */
+.orders-page { padding-bottom: 40px; }
+.orders-header { margin-bottom: var(--space-md); }
+
+/* ─── Tabs ─── */
+.orders-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-outline-variant);
+  margin-bottom: var(--space-lg);
+}
+.orders-tab {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 14px; font-weight: 600; letter-spacing: 0.05em;
+  color: var(--color-on-surface-variant);
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+.orders-tab:hover { color: var(--color-primary); }
+.orders-tab-active {
+  color: var(--color-primary) !important;
+  border-bottom-color: var(--color-primary) !important;
+  font-weight: 700;
+}
+
+/* ─── Order Form Card ─── */
+.order-form-card { padding: var(--space-lg); }
+.section-title {
+  font-family: var(--font-display); font-size: 32px; font-weight: 600;
+  line-height: 40px; margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-surface-variant);
+  padding-bottom: var(--space-sm);
+}
+.form-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+.form-field { display: flex; flex-direction: column; }
+.span-2 { grid-column: span 2; }
+.total-amount-block {
+  padding: var(--space-md); background-color: var(--color-secondary-fixed);
+  border-radius: var(--radius-default); border: 1px solid var(--color-secondary);
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: var(--shadow-ambient); margin-top: var(--space-sm);
+}
+.form-actions {
+  display: flex; justify-content: flex-end; gap: var(--space-md);
+  margin-top: var(--space-lg); padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-surface-variant);
+}
+
+/* ─── History Filters ─── */
+.history-filters {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--space-md); margin-bottom: var(--space-md);
+  padding: var(--space-md); background: var(--color-surface-bright);
+  border-radius: var(--radius-default); border: 1px solid var(--color-gold);
+  box-shadow: var(--shadow-ambient);
+}
+.search-wrap {
+  position: relative; flex: 1; min-width: 300px;
+}
+.search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--color-outline);
+}
+.search-input {
+  width: 100%; padding: 8px 12px 8px 40px;
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-gold); border-radius: var(--radius-full);
+  font-size: 16px; outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+.filter-selects { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.filter-select {
+  background: var(--color-surface); border: 1px solid var(--color-gold);
+  border-radius: var(--radius-default); padding: 8px 12px;
+  font-size: 14px; font-weight: 600; outline: none;
+}
+.filter-select:focus { border-color: var(--color-primary); }
+
+/* ─── History Table ─── */
+.history-table-wrap { padding: var(--space-md); overflow: hidden; }
+.history-table-scroll { overflow-x: auto; }
+.history-table {
+  width: 100%; text-align: left; border-collapse: collapse;
+}
+.history-table thead tr {
+  background: rgba(255, 234, 224, 0.5);
+  border-bottom: 1px solid rgba(224, 190, 196, 0.3);
+}
+.history-table th {
+  padding: 16px 24px; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-on-surface-variant);
+}
+.history-table tbody tr {
+  border-bottom: 1px solid rgba(224, 190, 196, 0.2);
+  transition: background 0.2s;
+}
+.history-table tbody tr:hover { background: var(--color-surface-container-lowest); }
+.history-table td { padding: 16px 24px; font-size: 14px; }
+.order-id-cell { font-weight: 600; color: var(--color-primary); }
+.date-cell { font-size: 13px; color: var(--color-on-surface-variant); }
+.action-buttons { display: flex; gap: 4px; }
+.action-btn {
+  padding: 4px; color: var(--color-on-surface-variant);
+  transition: color 0.2s;
+}
+.action-btn:hover { color: var(--color-primary); }
+.action-btn-delete:hover { color: var(--color-error); }
+
+/* ─── Edit Drawer ─── */
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 60;
+}
+.edit-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 100%; max-width: 560px;
+  background: var(--color-card); border-left: 1px solid rgba(224,190,196,0.3);
+  box-shadow: var(--shadow-interactive); z-index: 70;
+  display: flex; flex-direction: column;
+}
+.drawer-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-md); border-bottom: 1px solid var(--color-gold);
+  background: white; position: sticky; top: 0; z-index: 10;
+}
+.drawer-close {
+  color: var(--color-on-surface-variant); padding: 4px;
+  border-radius: 50%; transition: all 0.2s;
+}
+.drawer-close:hover { background: var(--color-surface-variant); color: var(--color-primary); }
+.drawer-body {
+  flex: 1; overflow-y: auto; padding: var(--space-md);
+  display: flex; flex-direction: column; gap: var(--space-md);
+}
+.drawer-section {
+  background: var(--color-card); border-radius: var(--radius-default);
+  padding: var(--space-md); box-shadow: var(--shadow-ambient);
+  border: 1px solid var(--color-gold);
+}
+.drawer-section-title {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--color-inverse-surface);
+  border-bottom: 1px solid rgba(224,190,196,0.3);
+  padding-bottom: 8px; margin-bottom: var(--space-sm);
+}
+.drawer-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+.drawer-field { display: flex; flex-direction: column; }
+.drawer-input { border-color: var(--color-gold) !important; padding: 6px 12px !important; }
+.total-display {
+  padding: 8px 12px; background: var(--color-secondary-fixed);
+  border: 1px solid var(--color-gold); border-radius: var(--radius-default);
+  font-family: var(--font-display); font-size: 20px; font-weight: 600;
+  color: var(--color-secondary);
+}
+.drawer-footer {
+  padding: var(--space-md); border-top: 1px solid var(--color-gold);
+  background: white; display: flex; justify-content: flex-end;
+  gap: var(--space-sm); position: sticky; bottom: 0; z-index: 10;
+}
+
+/* ─── Mobile Cards (hidden on desktop) ─── */
+.history-mobile-cards {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Mobile (< 768px)
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ─── Form Grid ─── */
+  .form-grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+  .total-amount-block { flex-direction: column; gap: 8px; text-align: center; }
+  .section-title { font-size: 24px; }
+
+  /* ─── Orders Page ─── */
+  .orders-page { padding-bottom: 24px; }
+  .orders-header h1 { font-size: 28px; line-height: 36px; }
+
+  /* ─── Tabs — full-width, equal split ─── */
+  .orders-tabs { margin-bottom: var(--space-md); }
+  .orders-tab { flex: 1; text-align: center; padding: 12px 8px; font-size: 13px; }
+
+  /* ─── Filters — stacked layout ─── */
+  .history-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
+  .search-wrap {
+    min-width: auto;
+    width: 100%;
+  }
+  .filter-selects {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+  .filter-select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+    padding: 10px 32px 10px 10px;
+  }
+  .filter-selects .btn-secondary {
+    grid-column: 1 / -1;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* ─── Hide Desktop Table ─── */
+  .history-desktop-only {
+    display: none !important;
+  }
+
+  /* ─── Show Mobile Cards ─── */
+  .history-mobile-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  /* ─── Mobile Order Card ─── */
+  .mobile-order-card {
+    padding: 16px;
+    border-left: 4px solid var(--color-gold);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-order-card:active {
+    transform: scale(0.985);
+    box-shadow: var(--shadow-interactive);
+  }
+
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .mobile-card-order-id {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-card-customer {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    margin-bottom: 4px;
+  }
+  .mobile-card-phone {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    margin-bottom: 4px;
+  }
+  .mobile-card-saree {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    margin-bottom: 12px;
+  }
+
+  /* ─── Qty / Total / Payment row ─── */
+  .mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-surface-container-lowest);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(224, 190, 196, 0.2);
+  }
+  .mobile-card-detail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .mobile-card-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+  }
+  .mobile-card-detail-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-on-surface);
+  }
+  .mobile-card-total {
+    color: var(--color-secondary);
+  }
+
+  /* ─── Footer: dates + edit btn ─── */
+  .mobile-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(224, 190, 196, 0.2);
+  }
+  .mobile-card-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-on-surface-variant);
+  }
+  .mobile-card-edit-btn {
+    margin-left: auto;
+    padding: 6px;
+    color: var(--color-on-surface-variant);
+    background: var(--color-surface-container-lowest);
+    border: 1px solid var(--color-outline-variant);
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .mobile-card-edit-btn:active {
+    background: var(--color-primary-fixed);
+    color: var(--color-primary);
+  }
+
+  /* ─── Edit Drawer — full-screen modal on mobile ─── */
+  .edit-drawer {
+    max-width: 100%;
+    width: 100%;
+    border-left: none;
+    border-radius: 0;
+  }
+  .drawer-header {
+    padding: 14px 16px;
+  }
+  .drawer-header h3 {
+    font-size: 18px;
+    line-height: 24px;
+  }
+  .drawer-body {
+    padding: 14px 16px;
+  }
+  .drawer-section {
+    padding: 14px;
+  }
+  .drawer-fields {
+    grid-template-columns: 1fr;
+  }
+  .drawer-field[style] {
+    grid-column: auto !important;
+  }
+  .drawer-footer {
+    padding: 14px 16px;
+  }
+
+  /* ─── Order Form Card on mobile ─── */
+  .order-form-card {
+    padding: var(--space-md) var(--space-sm);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Landscape mobile (500px+ width, short height)
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) and (min-width: 500px) and (orientation: landscape),
+       (max-width: 900px) and (min-width: 500px) and (max-height: 500px) {
+  .history-mobile-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Wider landscape (tablet-ish, still showing cards)
+   ═══════════════════════════════════════════ */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .history-table th,
+  .history-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+}
+

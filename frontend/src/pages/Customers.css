@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════
+   Customers Page Styles
+   ═══════════════════════════════════════════ */
+.customers-page { padding-bottom: 40px; }
+
+.customers-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: var(--space-md); gap: 16px; flex-wrap: wrap;
+}
+.customers-actions {
+  display: flex; align-items: center; gap: var(--space-sm);
+}
+.customer-search-wrap {
+  position: relative; width: 256px;
+}
+
+/* ─── Customer List ─── */
+.customers-list { overflow: hidden; }
+.cust-header-row {
+  display: none;
+}
+.cust-body {
+  display: flex; flex-direction: column;
+}
+.cust-row {
+  padding: 16px; border-bottom: 1px solid var(--color-outline-variant);
+  transition: background 0.2s;
+}
+.cust-row:last-child { border-bottom: none; }
+.cust-row:hover { background: var(--color-surface-container-low); }
+
+.cust-col-3 { }
+.cust-col-2 { }
+
+.cust-info { margin-bottom: 8px; }
+.cust-name { font-weight: 600; font-size: 16px; color: var(--color-on-surface); }
+.cust-phone {
+  display: flex; align-items: center; gap: 4px; margin-top: 4px;
+  font-size: 14px; color: var(--color-on-surface-variant);
+}
+.cust-location { margin-bottom: 12px; font-size: 14px; }
+.cust-city { font-size: 14px; color: var(--color-on-surface-variant); }
+
+.cust-stat {
+  display: flex; justify-content: space-between; margin-bottom: 4px;
+}
+.mobile-label {
+  font-size: 14px; font-weight: 600; color: var(--color-on-surface-variant);
+}
+.cust-stat-value { font-weight: 500; }
+.cust-status-col { margin-top: 12px; }
+
+/* ─── Desktop Layout ─── */
+@media (min-width: 769px) {
+  .cust-header-row {
+    display: grid; grid-template-columns: 3fr 3fr 2fr 2fr 2fr;
+    gap: 16px; padding: 16px; border-bottom: 1px solid var(--color-outline-variant);
+    background: var(--color-surface);
+    font-size: 14px; font-weight: 600; letter-spacing: 0.05em;
+    color: var(--color-on-surface-variant);
+  }
+  .cust-row {
+    display: grid; grid-template-columns: 3fr 3fr 2fr 2fr 2fr;
+    gap: 16px; align-items: center;
+  }
+  .cust-info { margin-bottom: 0; }
+  .cust-location { margin-bottom: 0; }
+  .cust-stat {
+    justify-content: flex-end; margin-bottom: 0;
+  }
+  .mobile-label { display: none; }
+  .cust-status-col {
+    margin-top: 0; display: flex; justify-content: center;
+  }
+}
+
+/* ─── Mobile Card Style ─── */
+@media (max-width: 768px) {
+  .customers-list {
+    background: transparent; box-shadow: none;
+  }
+  .cust-body {
+    gap: 16px;
+  }
+  .cust-row {
+    background: var(--color-surface-container-lowest);
+    border-radius: 8px; border: 1px solid var(--color-outline-variant);
+    border-left: 3px solid var(--color-gold);
+    box-shadow: var(--shadow-ambient);
+  }
+  .customer-search-wrap { width: 100%; }
+  .customers-actions { width: 100%; }
+}
