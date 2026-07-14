@@ -41,4 +41,6 @@ backend/cookies.txt
 # package-lock.json  ← keep this commented unless you want to exclude it
 
 stitch_colour_your_drape_dashboard
-firestore
+firestore.rules
+
+.env.example
