@@ -43,4 +43,5 @@ backend/cookies.txt
 stitch_colour_your_drape_dashboard
 firestore.rules
 
-.env.example
+backend/.env.example
+screenshots
