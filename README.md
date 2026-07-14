@@ -2,7 +2,7 @@
 
 An internal business dashboard for **Colour Your Drape**, a saree business that sells via Instagram and WhatsApp. Built to track orders, customers, inventory, and sales/profit — replacing manual spreadsheet tracking with a real-time web app.
 
-## 📸 Screenshots
+## Screenshots
 
 ### Dashboard
 ![Dashboard](screenshots/dashboard.png)
@@ -19,7 +19,7 @@ An internal business dashboard for **Colour Your Drape**, a saree business that 
 
 ---
 
-## ✨ Features
+## Features
 
 - **Secure Login** — JWT-based authentication with bcrypt password hashing (httpOnly cookies)
 - **Dashboard** — KPIs (Total Sales, Profit, Orders, Avg Order Value, Pending Deliveries, Low Stock) with live charts:
@@ -34,7 +34,7 @@ An internal business dashboard for **Colour Your Drape**, a saree business that 
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer      | Technology                                      |
 |------------|--------------------------------------------------|
@@ -46,7 +46,7 @@ An internal business dashboard for **Colour Your Drape**, a saree business that 
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 color_your_drape/
@@ -70,7 +70,7 @@ color_your_drape/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -121,7 +121,7 @@ curl -X POST http://localhost:5000/api/auth/register \
 
 ---
 
-## 🔒 Environment Variables
+## Environment Variables
 
 See `backend/.env.example` for the full list. Required:
 
@@ -141,7 +141,7 @@ See `backend/.env.example` for the full list. Required:
 
 ---
 
-## 📌 Roadmap / Known Gaps
+## Roadmap / Known Gaps
 
 - [ ] "Add Team Member" page (currently only via API/curl)
 - [ ] Change Password UI
@@ -151,7 +151,7 @@ See `backend/.env.example` for the full list. Required:
 
 ---
 
-## ⚠️ Security Notes
+## Security Notes
 
 - This is an **internal business tool**, not a public-facing app — there is intentionally no public registration.
 - `.env` and `serviceAccountKey.json` must never be committed (see `.gitignore`).
@@ -159,6 +159,6 @@ See `backend/.env.example` for the full list. Required:
 
 ---
 
-## 📄 License
+## License
 
 Private project — not licensed for public use.
