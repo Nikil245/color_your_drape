@@ -10,6 +10,7 @@ const orderRoutes = require('./src/routes/orders');
 const customerRoutes = require('./src/routes/customers');
 const dashboardRoutes = require('./src/routes/dashboard');
 const inventoryRoutes = require('./src/routes/inventory');
+const settingsRoutes = require('./src/routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,6 +35,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // ─── Health Check ───
 app.get('/api/health', (req, res) => {

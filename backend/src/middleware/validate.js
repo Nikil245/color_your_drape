@@ -77,4 +77,32 @@ const validateInventory = [
   handleValidationErrors,
 ];
 
-module.exports = { validateOrder, validateLogin, validateRegister, validateInventory };
+/**
+ * Sanitize and validate profile name update.
+ */
+const validateUpdateProfile = [
+  body('name').trim().notEmpty().withMessage('Name is required').escape(),
+  handleValidationErrors,
+];
+
+/**
+ * Sanitize and validate change-password fields.
+ */
+const validateChangePassword = [
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
+  handleValidationErrors,
+];
+
+/**
+ * Sanitize and validate business settings fields.
+ */
+const validateBusinessSettings = [
+  body('businessName').trim().notEmpty().withMessage('Business name is required').escape(),
+  body('tagline').optional({ checkFalsy: true }).trim().escape(),
+  body('contactPhone').optional({ checkFalsy: true }).trim().escape(),
+  body('lowStockThreshold').optional({ checkFalsy: true }).isInt({ min: 0 }).withMessage('Low stock threshold must be a non-negative integer'),
+  handleValidationErrors,
+];
+
+module.exports = { validateOrder, validateLogin, validateRegister, validateInventory, validateUpdateProfile, validateChangePassword, validateBusinessSettings };

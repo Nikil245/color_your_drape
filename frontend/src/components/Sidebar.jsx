@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import './Layout.css';
 
 export default function Sidebar({ isOpen, onClose }) {
   const { logout } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -16,6 +18,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/orders', icon: 'shopping_bag', label: 'Orders' },
     { to: '/customers', icon: 'group', label: 'Customers' },
     { to: '/inventory', icon: 'inventory_2', label: 'Inventory' },
+    { to: '/settings', icon: 'settings', label: 'Settings' },
   ];
 
   return (
@@ -28,8 +31,8 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-brand">
           <img src="/logo.png" alt="Colour Your Drape" className="sidebar-logo" />
           <div>
-            <h1 className="sidebar-title">Colour Your Drape</h1>
-            <p className="sidebar-subtitle">Artisanal Luxury</p>
+            <h1 className="sidebar-title">{settings.businessName}</h1>
+            <p className="sidebar-subtitle">{settings.tagline}</p>
           </div>
         </div>
 

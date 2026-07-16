@@ -1,0 +1,258 @@
+/* ═══════════════════════════════════════════
+   Settings Page — Colour Your Drape
+   ═══════════════════════════════════════════ */
+
+.settings-page {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ─── Page Header ─── */
+.settings-header {
+  margin-bottom: 32px;
+}
+
+.settings-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-on-background);
+  line-height: 1.3;
+}
+
+.settings-header p {
+  font-size: 14px;
+  color: var(--color-on-surface-variant);
+  margin-top: 4px;
+}
+
+/* ─── Section Cards ─── */
+.settings-section {
+  background-color: var(--color-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-ambient);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-outline-variant);
+  background: linear-gradient(135deg, rgba(178, 23, 85, 0.04) 0%, rgba(201, 162, 39, 0.04) 100%);
+}
+
+.settings-section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-magenta), var(--color-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-section-icon .material-symbols-outlined {
+  font-size: 20px;
+  color: white;
+}
+
+.settings-section-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-on-background);
+}
+
+.settings-section-subtitle {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin-top: 2px;
+}
+
+.settings-section-body {
+  padding: 24px;
+}
+
+/* ─── Field Rows ─── */
+.settings-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.settings-field-row.full-width {
+  grid-template-columns: 1fr;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+}
+
+.settings-field-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-on-background);
+  padding: 10px 14px;
+  background-color: var(--color-surface-container-low);
+  border-radius: var(--radius-default);
+  border: 1px solid var(--color-outline-variant);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* ─── Inline Edit Group ─── */
+.settings-edit-group {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.settings-edit-group .form-input {
+  flex: 1;
+}
+
+.settings-edit-group .btn-primary {
+  flex-shrink: 0;
+  height: 48px;
+  padding: 0 20px;
+  font-size: 13px;
+}
+
+/* ─── Inline Message (success / error) ─── */
+.settings-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-default);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.settings-msg.success {
+  background-color: #E6F4EA;
+  color: #1E8E3E;
+  border: 1px solid #C4E5CC;
+}
+
+.settings-msg.error {
+  background-color: #FCE8E6;
+  color: #D93025;
+  border: 1px solid #F5C6CB;
+}
+
+.settings-msg .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ─── Password Section ─── */
+.settings-password-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.settings-password-field {
+  position: relative;
+}
+
+.settings-password-field .form-input {
+  padding-right: 44px;
+}
+
+.settings-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-on-surface-variant);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.settings-password-toggle:hover {
+  color: var(--color-on-background);
+}
+
+.settings-password-toggle .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* ─── Divider ─── */
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--color-outline-variant);
+  margin: 20px 0;
+}
+
+/* ─── Action Row ─── */
+.settings-action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* ─── Threshold Info ─── */
+.threshold-hint {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  margin-top: 6px;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .settings-field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-body {
+    padding: 16px;
+  }
+
+  .settings-section-header {
+    padding: 16px;
+  }
+
+  .settings-edit-group {
+    flex-direction: column;
+  }
+
+  .settings-edit-group .btn-primary {
+    width: 100%;
+    height: 44px;
+  }
+
+  .settings-action-row {
+    flex-direction: column-reverse;
+  }
+
+  .settings-action-row .btn-primary,
+  .settings-action-row .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}

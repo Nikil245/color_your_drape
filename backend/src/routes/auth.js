@@ -3,7 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { db } = require('../config/firebase');
-const { validateLogin, validateRegister } = require('../middleware/validate');
+const { validateLogin, validateRegister, validateUpdateProfile, validateChangePassword } = require('../middleware/validate');
+const authMiddleware = require('../middleware/auth');
 require('dotenv').config();
 
 const router = express.Router();
@@ -132,6 +133,72 @@ router.get('/me', (req, res) => {
     return res.json({ user: { uid: decoded.uid, email: decoded.email, name: decoded.name } });
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token.' });
+  }
+});
+
+/**
+ * PUT /api/auth/profile
+ * Update the authenticated user's name in Firestore and re-issue JWT.
+ */
+router.put('/profile', authMiddleware, validateUpdateProfile, async (req, res) => {
+  try {
+    const { name } = req.body;
+    const uid = req.user.uid;
+
+    await db.collection('users').doc(uid).update({ name });
+
+    // Re-issue JWT with updated name so future /me calls are accurate
+    const token = jwt.sign(
+      { uid, email: req.user.email, name },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({
+      message: 'Profile updated successfully.',
+      user: { uid, email: req.user.email, name },
+    });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+/**
+ * POST /api/auth/change-password
+ * Verify current password then hash and store the new one.
+ */
+router.post('/change-password', authMiddleware, validateChangePassword, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const uid = req.user.uid;
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const userData = userDoc.data();
+    const isMatch = await bcrypt.compare(currentPassword, userData.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+    await db.collection('users').doc(uid).update({ passwordHash });
+
+    return res.json({ message: 'Password changed successfully.' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 

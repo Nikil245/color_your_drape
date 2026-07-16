@@ -9,11 +9,24 @@ const router = express.Router();
 router.use(authMiddleware);
 
 /**
- * Derive status from quantityRemaining.
+ * Fetch the low-stock threshold from settings. Falls back to 5.
  */
-function deriveStatus(remaining) {
+async function getLowStockThreshold() {
+  try {
+    const doc = await db.collection('settings').doc('business').get();
+    if (doc.exists && typeof doc.data().lowStockThreshold === 'number') {
+      return doc.data().lowStockThreshold;
+    }
+  } catch (_) { /* ignore, use default */ }
+  return 5;
+}
+
+/**
+ * Derive status from quantityRemaining and the configured threshold.
+ */
+function deriveStatus(remaining, threshold) {
   if (remaining <= 0) return 'Out of Stock';
-  if (remaining <= 5) return 'Low Stock';
+  if (remaining <= threshold) return 'Low Stock';
   return 'In Stock';
 }
 
@@ -31,6 +44,7 @@ router.post('/', validateInventory, async (req, res) => {
     const qtyReceived = Number(quantityReceived);
     const qtySold = 0;
     const qtyRemaining = qtyReceived - qtySold;
+    const threshold = await getLowStockThreshold();
 
     const inventoryData = {
       stockReceivedDate: stockReceivedDate || new Date().toISOString().split('T')[0],
@@ -40,7 +54,7 @@ router.post('/', validateInventory, async (req, res) => {
       quantityReceived: qtyReceived,
       quantitySold: qtySold,
       quantityRemaining: qtyRemaining,
-      status: deriveStatus(qtyRemaining),
+      status: deriveStatus(qtyRemaining, threshold),
       purchasePrice: Number(purchasePrice),
       sellingPrice: Number(sellingPrice),
       supplierName,
@@ -143,6 +157,7 @@ router.put('/:id', validateInventory, async (req, res) => {
     const qtyReceived = Number(quantityReceived);
     const qtySold = Number(quantitySold || 0);
     const qtyRemaining = qtyReceived - qtySold;
+    const threshold = await getLowStockThreshold();
 
     const updateData = {
       stockReceivedDate: stockReceivedDate || '',
@@ -152,7 +167,7 @@ router.put('/:id', validateInventory, async (req, res) => {
       quantityReceived: qtyReceived,
       quantitySold: qtySold,
       quantityRemaining: qtyRemaining,
-      status: deriveStatus(qtyRemaining),
+      status: deriveStatus(qtyRemaining, threshold),
       purchasePrice: Number(purchasePrice),
       sellingPrice: Number(sellingPrice),
       supplierName,

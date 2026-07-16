@@ -14,6 +14,9 @@ export const authAPI = {
   register: (name, email, password) => api.post('/auth/register', { name, email, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  updateProfile: (name) => api.put('/auth/profile', { name }),
+  changePassword: (currentPassword, newPassword) =>
+    api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // ─── Orders ───
@@ -41,6 +44,12 @@ export const inventoryAPI = {
   brands: () => api.get('/inventory/brands'),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id) => api.delete(`/inventory/${id}`),
+};
+
+// ─── Settings ───
+export const settingsAPI = {
+  getBusiness: () => api.get('/settings/business'),
+  updateBusiness: (data) => api.put('/settings/business', data),
 };
 
 export default api;

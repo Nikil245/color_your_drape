@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import './Layout.css';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   return (
     <div className="app-layout">
@@ -18,7 +20,7 @@ export default function Layout() {
           <button className="topbar-menu-btn" onClick={() => setSidebarOpen(true)}>
             <span className="material-symbols-outlined">menu</span>
           </button>
-          <h1 className="topbar-brand">Colour Your Drape</h1>
+          <h1 className="topbar-brand">{settings.businessName}</h1>
           <div className="topbar-actions">
             <div className="topbar-avatar">
               {user?.name?.charAt(0) || 'A'}
