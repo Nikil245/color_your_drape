@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
-
 // Import routes
 const authRoutes = require('./src/routes/auth');
 const orderRoutes = require('./src/routes/orders');
@@ -13,6 +12,7 @@ const inventoryRoutes = require('./src/routes/inventory');
 const settingsRoutes = require('./src/routes/settings');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 // ─── Security Headers ───
