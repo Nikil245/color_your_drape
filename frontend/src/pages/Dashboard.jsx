@@ -4,11 +4,12 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
   ArcElement, LineElement, PointElement, Tooltip, Legend,
+  LineController, BarController, DoughnutController,
 } from 'chart.js';
 import { dashboardAPI } from '../services/api';
 import './Dashboard.css';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Tooltip, Legend, LineController, BarController, DoughnutController);
 
 const kpiConfig = [
   { key: 'totalSales', label: 'Total Sales', icon: 'payments', prefix: '₹', borderColor: 'var(--color-primary-container)' },
