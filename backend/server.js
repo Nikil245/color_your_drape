@@ -18,9 +18,15 @@ const PORT = process.env.PORT || 5000;
 // ─── Security Headers ───
 app.use(helmet());
 
-// ─── CORS — allow the Vite dev server ───
+// ─── CORS — allow the Vite dev server + deployed frontend ───
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  // Set FRONTEND_URL on Render to your deployed frontend URL (e.g. https://your-app.onrender.com)
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true, // required for httpOnly cookies
 }));
 
@@ -50,5 +56,5 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ───
 app.listen(PORT, () => {
-  console.log(`✦ Colour Your Drape API running on http://localhost:${PORT}`);
+  console.log(`✦ Colour Your Drape API running on port ${PORT}`);
 });
