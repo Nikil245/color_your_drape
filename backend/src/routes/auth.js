@@ -61,6 +61,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
     return res.json({
       message: 'Login successful',
       user: { uid: userDoc.id, email: userData.email, name: userData.name },
+      token, // Return token for iOS Safari fallback
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -124,7 +125,12 @@ router.post('/logout', (req, res) => {
  * Return the currently authenticated user info (read from JWT cookie).
  */
 router.get('/me', (req, res) => {
-  const token = req.cookies?.token;
+  let token = req.cookies?.token;
+  
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
   if (!token) {
     return res.status(401).json({ error: 'Not authenticated.' });
   }
@@ -164,6 +170,7 @@ router.put('/profile', authMiddleware, validateUpdateProfile, async (req, res) =
     return res.json({
       message: 'Profile updated successfully.',
       user: { uid, email: req.user.email, name },
+      token, // Return new token
     });
   } catch (err) {
     console.error('Update profile error:', err);

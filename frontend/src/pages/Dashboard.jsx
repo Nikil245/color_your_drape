@@ -112,7 +112,7 @@ export default function Dashboard() {
     responsive: true,
     maintainAspectRatio: false,
     cutout: '70%',
-    plugins: { legend: { position: 'right' } },
+    plugins: { legend: { display: false } },
   };
 
   // Top Brands bar
@@ -198,19 +198,37 @@ export default function Dashboard() {
             <h3 className="text-headline-sm" style={{ color: 'var(--color-on-background)', marginBottom: 16 }}>
               Orders by Platform
             </h3>
-            <div className="chart-canvas-wrap" style={{ height: 160, position: 'relative' }}>
-              {charts.ordersByPlatform?.labels?.length > 0 ? (
-                <>
-                  <Doughnut data={platformData} options={platformOptions} />
-                  <div className="donut-center-label">
-                    <span className="text-headline-sm">
-                      {kpis.totalOrders} {kpis.totalOrders === 1 ? 'Order' : 'Orders'}
-                    </span>
+            <div className="platform-donut-wrapper">
+              <div className="chart-canvas-wrap" style={{ height: 160, position: 'relative' }}>
+                {charts.ordersByPlatform?.labels?.length > 0 ? (
+                  <>
+                    <Doughnut data={platformData} options={platformOptions} />
+                    <div className="donut-center-label">
+                      <div style={{ textAlign: 'center' }}>
+                        <div className="text-headline-sm" style={{ lineHeight: 1 }}>{kpis.totalOrders}</div>
+                        <div className="text-label-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: 2 }}>
+                          {kpis.totalOrders === 1 ? 'Order' : 'Orders'}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-state" style={{ padding: 20 }}>
+                    <p>No data yet</p>
                   </div>
-                </>
-              ) : (
-                <div className="empty-state" style={{ padding: 20 }}>
-                  <p>No data yet</p>
+                )}
+              </div>
+              {charts.ordersByPlatform?.labels?.length > 0 && (
+                <div className="custom-legend">
+                  {charts.ordersByPlatform.labels.map((label, index) => (
+                    <div key={label} className="legend-item">
+                      <span
+                        className="legend-color-box"
+                        style={{ backgroundColor: platformData.datasets[0].backgroundColor[index] }}
+                      ></span>
+                      <span className="text-label-md">{label}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

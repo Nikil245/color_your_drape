@@ -18,10 +18,24 @@ function formatCurrency(num) {
 }
 
 export default function OrderForm() {
-  const [formData, setFormData] = useState({ ...emptyOrder });
+  const [formData, setFormData] = useState(() => {
+    const saved = localStorage.getItem('orderFormDraft');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return { ...emptyOrder };
+      }
+    }
+    return { ...emptyOrder };
+  });
   const [saving, setSaving] = useState(false);
   const [inventoryItems, setInventoryItems] = useState([]);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    localStorage.setItem('orderFormDraft', JSON.stringify(formData));
+  }, [formData]);
 
   // Fetch all inventory items on mount
   useEffect(() => {
@@ -138,6 +152,7 @@ export default function OrderForm() {
       await ordersAPI.create(formData);
       addToast('Order created successfully!', 'success');
       setFormData({ ...emptyOrder });
+      localStorage.removeItem('orderFormDraft');
       // Refresh inventory data (stock levels changed)
       const res = await inventoryAPI.list();
       setInventoryItems(res.data.items || []);
@@ -304,7 +319,10 @@ export default function OrderForm() {
           </div>
         </div>
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => setFormData({ ...emptyOrder })}>Cancel</button>
+          <button type="button" className="btn-secondary" onClick={() => {
+            setFormData({ ...emptyOrder });
+            localStorage.removeItem('orderFormDraft');
+          }}>Reset Form</button>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Saving...' : 'Save Order'}
           </button>

@@ -102,6 +102,38 @@
   pointer-events: none;
 }
 
+/* ─── Platform Donut Custom Legend ─── */
+.platform-donut-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: 100%;
+}
+
+.platform-donut-wrapper .chart-canvas-wrap {
+  flex: 1;
+}
+
+.custom-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 100px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
 /* ─── Recent Orders ─── */
 .recent-orders {
   padding: var(--space-md);

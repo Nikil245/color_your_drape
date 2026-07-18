@@ -73,6 +73,9 @@ export default function Settings() {
     setNameMsg(null);
     try {
       const res = await authAPI.updateProfile(trimmed);
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       setUser(res.data.user);
       setNameMsg({ type: 'success', text: 'Name updated successfully.' });
     } catch (err) {
