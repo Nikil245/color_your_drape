@@ -65,6 +65,7 @@
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .chart-header {
@@ -78,12 +79,15 @@
   flex-grow: 1;
   width: 100%;
   position: relative;
+  min-width: 0;
+  min-height: 0;
 }
 
 .charts-side {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 .chart-side-item {
@@ -91,6 +95,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .donut-center-label {
