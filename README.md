@@ -5,7 +5,7 @@ An internal business dashboard for **Colour Your Drape**, a saree business that 
 ## Screenshots
 
 ### Dashboard
-![Dashboard](screenshots/dashboard1.png)
+![Dashboard](screenshots/dashboard.png)
 
 ### Orders
 ![Orders](screenshots/orders1.png)
