@@ -22,7 +22,7 @@ const statusBadgeClass = (status) => {
 
 const emptyForm = {
   stockReceivedDate: new Date().toISOString().split('T')[0],
-  brandName: '', sareeColor: '', materialType: '', quantityReceived: '',
+  brandName: '', variants: [{ color: '', material: '', quantity: '' }],
   purchasePrice: '', sellingPrice: '', supplierName: '',
   supplierPhone: '', supplierAddress: '', remarks: '',
 };
@@ -85,9 +85,12 @@ export default function Inventory() {
     setEditDrawer(item);
     setEditData({
       stockReceivedDate: item.stockReceivedDate || '',
-      brandName: item.brandName, sareeColor: item.sareeColor,
-      materialType: item.materialType || '',
-      quantityReceived: item.quantityReceived,
+      brandName: item.brandName,
+      variants: item.variants && item.variants.length > 0 ? item.variants : [{
+        color: item.sareeColor || '',
+        material: item.materialType || '',
+        quantity: item.quantityReceived || 0
+      }],
       quantitySold: item.quantitySold || 0,
       purchasePrice: item.purchasePrice, sellingPrice: item.sellingPrice,
       supplierName: item.supplierName,
@@ -154,20 +157,62 @@ export default function Inventory() {
                 <input className="form-input" placeholder="e.g., JK Crape" value={formData.brandName}
                   onChange={(e) => handleFormChange('brandName', e.target.value)} required />
               </div>
-              <div className="form-field">
-                <label className="form-label">Saree Color</label>
-                <input className="form-input" placeholder="e.g., Maroon, Teal Blue" value={formData.sareeColor}
-                  onChange={(e) => handleFormChange('sareeColor', e.target.value)} required />
+
+              {/* Variants Section */}
+              <div className="inv-span-3 variants-container glass-card heritage-border" style={{ padding: '16px', marginTop: '8px' }}>
+                <h4 className="text-label-lg" style={{ color: 'var(--color-primary)', marginBottom: '16px' }}>Variants</h4>
+                {formData.variants.map((v, idx) => (
+                  <div key={idx} className="variant-row" style={{ display: 'flex', gap: '16px', marginBottom: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div className="form-field" style={{ flex: '1 1 200px' }}>
+                      <label className="form-label">Color</label>
+                      <input className="form-input" placeholder="e.g., Maroon" value={v.color}
+                        onChange={(e) => {
+                          const newV = [...formData.variants];
+                          newV[idx].color = e.target.value;
+                          handleFormChange('variants', newV);
+                        }} required />
+                    </div>
+                    <div className="form-field" style={{ flex: '1 1 200px' }}>
+                      <label className="form-label">Material</label>
+                      <input className="form-input" placeholder="e.g., Pure Silk" value={v.material}
+                        onChange={(e) => {
+                          const newV = [...formData.variants];
+                          newV[idx].material = e.target.value;
+                          handleFormChange('variants', newV);
+                        }} required />
+                    </div>
+                    <div className="form-field" style={{ flex: '0 1 120px' }}>
+                      <label className="form-label">Quantity</label>
+                      <input type="number" min="1" className="form-input" placeholder="0" value={v.quantity}
+                        onChange={(e) => {
+                          const newV = [...formData.variants];
+                          newV[idx].quantity = e.target.value;
+                          handleFormChange('variants', newV);
+                        }} required />
+                    </div>
+                    {idx > 0 && (
+                      <button type="button" className="action-btn action-btn-delete" onClick={() => {
+                        const newV = formData.variants.filter((_, i) => i !== idx);
+                        handleFormChange('variants', newV);
+                      }} title="Remove Variant" style={{ marginTop: '28px' }}>
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="btn-secondary" style={{ marginTop: '8px' }} onClick={() => {
+                  handleFormChange('variants', [...formData.variants, { color: '', material: '', quantity: '' }]);
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                  Add Another Variant
+                </button>
               </div>
+
               <div className="form-field">
-                <label className="form-label">Material Type</label>
-                <input className="form-input" placeholder="e.g., Pure Silk, Cotton" value={formData.materialType}
-                  onChange={(e) => handleFormChange('materialType', e.target.value)} required />
-              </div>
-              <div className="form-field">
-                <label className="form-label">Quantity Received</label>
-                <input type="number" min="0" className="form-input" placeholder="0" value={formData.quantityReceived}
-                  onChange={(e) => handleFormChange('quantityReceived', e.target.value)} required />
+                <label className="form-label">Total Quantity Received</label>
+                <div className="form-input" style={{ backgroundColor: 'var(--color-surface-variant)', fontWeight: 'bold' }}>
+                  {formData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0)}
+                </div>
               </div>
               <div className="form-field">
                 <label className="form-label">Purchase Price (₹)</label>
@@ -262,16 +307,17 @@ export default function Inventory() {
               </thead>
               <tbody>
                 {items.map((item) => {
-                  const remaining = item.quantityReceived - (item.quantitySold || 0);
+                  const received = item.totalQuantity ?? item.quantityReceived ?? 0;
+                  const remaining = received - (item.quantitySold || 0);
                   const status = deriveStatus(remaining);
                   const remClass = remaining > 5 ? 'inv-remaining-ok' : remaining > 0 ? 'inv-remaining-low' : 'inv-remaining-out';
                   return (
                     <tr key={item.id}>
                       <td className="inv-name-cell">{item.brandName}</td>
-                      <td>{item.sareeColor}</td>
-                      <td>{item.materialType || '—'}</td>
+                      <td>{item.variants ? `${item.variants.length} Variants` : item.sareeColor}</td>
+                      <td>{item.variants ? 'Multiple' : (item.materialType || '—')}</td>
                       <td className="date-cell">{item.stockReceivedDate}</td>
-                      <td className="inv-qty-cell">{item.quantityReceived}</td>
+                      <td className="inv-qty-cell">{received}</td>
                       <td className="inv-qty-cell">{item.quantitySold || 0}</td>
                       <td className={`inv-qty-cell ${remClass}`}>{remaining}</td>
                       <td><span className={`badge ${statusBadgeClass(status)}`}>{status}</span></td>
@@ -298,7 +344,8 @@ export default function Inventory() {
         {/* Mobile Cards */}
         <div className="inventory-mobile-cards">
           {items.map((item) => {
-            const remaining = item.quantityReceived - (item.quantitySold || 0);
+            const received = item.totalQuantity ?? item.quantityReceived ?? 0;
+            const remaining = received - (item.quantitySold || 0);
             const status = deriveStatus(remaining);
             return (
               <div key={item.id} className="inv-mobile-card glass-card" onClick={() => openEdit(item)}>
@@ -306,7 +353,7 @@ export default function Inventory() {
                   <span className="inv-card-name">{item.brandName}</span>
                   <span className={`badge ${statusBadgeClass(status)}`}>{status}</span>
                 </div>
-                <div className="inv-card-brand">{item.sareeColor}{item.materialType ? ` · ${item.materialType}` : ''}</div>
+                <div className="inv-card-brand">{item.variants ? `${item.variants.length} Variants` : `${item.sareeColor}${item.materialType ? ` · ${item.materialType}` : ''}`}</div>
                 <div className="inv-card-supplier">
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>store</span>
                   {item.supplierName}
@@ -314,7 +361,7 @@ export default function Inventory() {
                 <div className="inv-card-stats">
                   <div className="inv-card-stat">
                     <span className="inv-card-stat-label">Received</span>
-                    <span className="inv-card-stat-value">{item.quantityReceived}</span>
+                    <span className="inv-card-stat-value">{received}</span>
                   </div>
                   <div className="inv-card-stat">
                     <span className="inv-card-stat-label">Sold</span>
@@ -350,7 +397,7 @@ export default function Inventory() {
           <div className="edit-drawer animate-slide-in">
             <div className="drawer-header">
               <h3 className="text-headline-sm" style={{ color: 'var(--color-primary)' }}>
-                Edit — {editDrawer.brandName} · {editDrawer.sareeColor}
+                Edit — {editDrawer.brandName}
               </h3>
               <button className="drawer-close" onClick={() => setEditDrawer(null)}>
                 <span className="material-symbols-outlined">close</span>
@@ -370,18 +417,59 @@ export default function Inventory() {
                     <input className="form-input drawer-input" value={editData.brandName}
                       onChange={(e) => handleEditChange('brandName', e.target.value)} />
                   </div>
-                  <div className="drawer-field">
-                    <label className="form-label" style={{fontSize:12}}>Saree Color</label>
-                    <input className="form-input drawer-input" value={editData.sareeColor}
-                      onChange={(e) => handleEditChange('sareeColor', e.target.value)} />
-                  </div>
-                  <div className="drawer-field">
-                    <label className="form-label" style={{fontSize:12}}>Material Type</label>
-                    <input className="form-input drawer-input" value={editData.materialType}
-                      onChange={(e) => handleEditChange('materialType', e.target.value)} />
-                  </div>
                 </div>
               </section>
+
+              <section className="drawer-section">
+                <h4 className="drawer-section-title">Variants</h4>
+                <div className="drawer-fields" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {editData.variants.map((v, idx) => (
+                    <div key={idx} className="variant-row glass-card heritage-border" style={{ display: 'flex', gap: '12px', padding: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div className="drawer-field" style={{ flex: '1 1 150px' }}>
+                        <label className="form-label" style={{fontSize:12}}>Color</label>
+                        <input className="form-input drawer-input" value={v.color}
+                          onChange={(e) => {
+                            const newV = [...editData.variants];
+                            newV[idx].color = e.target.value;
+                            handleEditChange('variants', newV);
+                          }} required />
+                      </div>
+                      <div className="drawer-field" style={{ flex: '1 1 150px' }}>
+                        <label className="form-label" style={{fontSize:12}}>Material</label>
+                        <input className="form-input drawer-input" value={v.material}
+                          onChange={(e) => {
+                            const newV = [...editData.variants];
+                            newV[idx].material = e.target.value;
+                            handleEditChange('variants', newV);
+                          }} required />
+                      </div>
+                      <div className="drawer-field" style={{ flex: '0 1 100px' }}>
+                        <label className="form-label" style={{fontSize:12}}>Quantity</label>
+                        <input type="number" min="1" className="form-input drawer-input" value={v.quantity}
+                          onChange={(e) => {
+                            const newV = [...editData.variants];
+                            newV[idx].quantity = e.target.value;
+                            handleEditChange('variants', newV);
+                          }} required />
+                      </div>
+                      {idx > 0 && (
+                        <button type="button" className="action-btn action-btn-delete" onClick={() => {
+                          const newV = editData.variants.filter((_, i) => i !== idx);
+                          handleEditChange('variants', newV);
+                        }} style={{ marginTop: '24px' }}>
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => {
+                    handleEditChange('variants', [...editData.variants, { color: '', material: '', quantity: '' }]);
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span> Add Variant
+                  </button>
+                </div>
+              </section>
+
               <section className="drawer-section">
                 <h4 className="drawer-section-title">Supplier Details</h4>
                 <div className="drawer-fields">
@@ -406,9 +494,10 @@ export default function Inventory() {
                 <h4 className="drawer-section-title">Quantities</h4>
                 <div className="drawer-fields">
                   <div className="drawer-field">
-                    <label className="form-label" style={{fontSize:12}}>Qty Received</label>
-                    <input type="number" min="0" className="form-input drawer-input" value={editData.quantityReceived}
-                      onChange={(e) => handleEditChange('quantityReceived', e.target.value)} />
+                    <label className="form-label" style={{fontSize:12}}>Total Qty Received</label>
+                    <div className="form-input drawer-input" style={{ backgroundColor: 'var(--color-surface-variant)', fontWeight: 'bold' }}>
+                      {editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0)}
+                    </div>
                   </div>
                   <div className="drawer-field">
                     <label className="form-label" style={{fontSize:12}}>Qty Sold <span style={{color:'var(--color-on-surface-variant)', fontWeight:400}}>(auto-updated from orders)</span></label>
@@ -418,11 +507,11 @@ export default function Inventory() {
                   <div className="drawer-field" style={{gridColumn:'1/-1'}}>
                     <label className="form-label" style={{fontSize:12}}>Remaining (auto-calculated)</label>
                     <div className="total-display">
-                      {Number(editData.quantityReceived || 0) - Number(editData.quantitySold || 0)} units
+                      {editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0) - Number(editData.quantitySold || 0)} units
                       {' '}— <span className={`badge ${statusBadgeClass(
-                        deriveStatus(Number(editData.quantityReceived || 0) - Number(editData.quantitySold || 0))
+                        deriveStatus(editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0) - Number(editData.quantitySold || 0))
                       )}`}>
-                        {deriveStatus(Number(editData.quantityReceived || 0) - Number(editData.quantitySold || 0))}
+                        {deriveStatus(editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0) - Number(editData.quantitySold || 0))}
                       </span>
                     </div>
                   </div>

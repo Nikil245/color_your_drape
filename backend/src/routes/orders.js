@@ -92,11 +92,13 @@ router.post('/', validateOrder, async (req, res) => {
       }
 
       const inv = invDoc.data();
-      const currentRemaining = (inv.quantityReceived || 0) - (inv.quantitySold || 0);
+      const received = inv.totalQuantity ?? inv.quantityReceived ?? 0;
+      const currentRemaining = received - (inv.quantitySold || 0);
 
       if (qty > currentRemaining) {
+        const itemDesc = inv.sareeColor ? `${inv.materialType || ''} - ${inv.sareeColor}` : 'this item';
         throw new Error(
-          `Only ${currentRemaining} units of ${inv.brandName} - ${inv.materialType || ''} - ${inv.sareeColor} remaining in stock`
+          `Only ${currentRemaining} units of ${inv.brandName} - ${itemDesc} remaining in stock`
         );
       }
 
@@ -108,7 +110,7 @@ router.post('/', validateOrder, async (req, res) => {
 
       // Update inventory: increase sold, recalculate remaining & status
       const newSold = (inv.quantitySold || 0) + qty;
-      const newRemaining = (inv.quantityReceived || 0) - newSold;
+      const newRemaining = received - newSold;
       t.update(invRef, {
         quantitySold: newSold,
         quantityRemaining: newRemaining,
@@ -273,8 +275,9 @@ router.put('/:id', validateOrder, async (req, res) => {
           const oldInvDoc = await t.get(oldInvRef);
           if (oldInvDoc.exists) {
             const oldInv = oldInvDoc.data();
+            const received = oldInv.totalQuantity ?? oldInv.quantityReceived ?? 0;
             const restoredSold = Math.max((oldInv.quantitySold || 0) - oldQty, 0);
-            const restoredRemaining = (oldInv.quantityReceived || 0) - restoredSold;
+            const restoredRemaining = received - restoredSold;
             t.update(oldInvRef, {
               quantitySold: restoredSold,
               quantityRemaining: restoredRemaining,
@@ -293,6 +296,7 @@ router.put('/:id', validateOrder, async (req, res) => {
           }
 
           const newInv = newInvDoc.data();
+          const received = newInv.totalQuantity ?? newInv.quantityReceived ?? 0;
           // Calculate available: current remaining + what we just restored (if same item)
           let currentSold = newInv.quantitySold || 0;
           // If old and new inventory items are the same, we already restored above,
@@ -300,16 +304,17 @@ router.put('/:id', validateOrder, async (req, res) => {
           if (oldInvId === newInvId) {
             currentSold = Math.max(currentSold - oldQty, 0);
           }
-          const currentRemaining = (newInv.quantityReceived || 0) - currentSold;
+          const currentRemaining = received - currentSold;
 
           if (newQty > currentRemaining) {
+            const itemDesc = newInv.sareeColor ? `${newInv.materialType || ''} - ${newInv.sareeColor}` : 'this item';
             throw new Error(
-              `Only ${currentRemaining} units of ${newInv.brandName} - ${newInv.materialType || ''} - ${newInv.sareeColor} remaining in stock`
+              `Only ${currentRemaining} units of ${newInv.brandName} - ${itemDesc} remaining in stock`
             );
           }
 
           const updatedSold = currentSold + newQty;
-          const updatedRemaining = (newInv.quantityReceived || 0) - updatedSold;
+          const updatedRemaining = received - updatedSold;
           t.update(newInvRef, {
             quantitySold: updatedSold,
             quantityRemaining: updatedRemaining,
@@ -371,8 +376,9 @@ router.delete('/:id', async (req, res) => {
         const invDoc = await t.get(invRef);
         if (invDoc.exists) {
           const inv = invDoc.data();
+          const received = inv.totalQuantity ?? inv.quantityReceived ?? 0;
           const restoredSold = Math.max((inv.quantitySold || 0) - qty, 0);
-          const restoredRemaining = (inv.quantityReceived || 0) - restoredSold;
+          const restoredRemaining = received - restoredSold;
           t.update(invRef, {
             quantitySold: restoredSold,
             quantityRemaining: restoredRemaining,

@@ -64,9 +64,10 @@ const validateRegister = [
 const validateInventory = [
   body('stockReceivedDate').optional({ checkFalsy: true }).isISO8601().withMessage('Invalid stock received date'),
   body('brandName').trim().notEmpty().withMessage('Brand name is required').escape(),
-  body('sareeColor').trim().notEmpty().withMessage('Saree color is required').escape(),
-  body('materialType').trim().notEmpty().withMessage('Material type is required').escape(),
-  body('quantityReceived').isInt({ min: 0 }).withMessage('Quantity received must be a non-negative integer'),
+  body('variants').isArray({ min: 1 }).withMessage('At least one variant is required'),
+  body('variants.*.color').trim().notEmpty().withMessage('Variant color is required').escape(),
+  body('variants.*.material').trim().notEmpty().withMessage('Variant material is required').escape(),
+  body('variants.*.quantity').isInt({ min: 1 }).withMessage('Variant quantity must be a positive integer'),
   body('quantitySold').optional({ checkFalsy: true }).isInt({ min: 0 }).withMessage('Quantity sold must be a non-negative integer'),
   body('purchasePrice').isFloat({ min: 0 }).withMessage('Purchase price must be a positive number'),
   body('sellingPrice').isFloat({ min: 0 }).withMessage('Selling price must be a positive number'),

@@ -50,14 +50,28 @@ export default function OrderForm() {
 
   // ─── Derived dropdown options ───
 
-  // Available items (only those with remaining stock > 0)
-  const availableItems = useMemo(() =>
-    inventoryItems.filter((i) => {
-      const remaining = (i.quantityReceived || 0) - (i.quantitySold || 0);
-      return remaining > 0;
-    }),
-    [inventoryItems]
-  );
+  // Available items (only those with remaining stock > 0, flattened for variants)
+  const availableItems = useMemo(() => {
+    const flattened = [];
+    inventoryItems.forEach((i) => {
+      const received = i.totalQuantity ?? i.quantityReceived ?? 0;
+      const remaining = received - (i.quantitySold || 0);
+      if (remaining > 0) {
+        if (i.variants && i.variants.length > 0) {
+          i.variants.forEach(v => {
+            flattened.push({
+              ...i,
+              sareeColor: v.color,
+              materialType: v.material,
+            });
+          });
+        } else {
+          flattened.push(i);
+        }
+      }
+    });
+    return flattened;
+  }, [inventoryItems]);
 
   // Unique brands from available items, sorted — trim to avoid whitespace duplicates
   const brandOptions = useMemo(() =>
@@ -91,7 +105,7 @@ export default function OrderForm() {
       .map((i) => ({
         id: i.id,
         color: i.sareeColor,
-        remaining: (i.quantityReceived || 0) - (i.quantitySold || 0),
+        remaining: (i.totalQuantity ?? i.quantityReceived ?? 0) - (i.quantitySold || 0),
         sellingPrice: i.sellingPrice,
         purchasePrice: i.purchasePrice,
       }));

@@ -159,7 +159,8 @@ router.get('/summary', async (req, res) => {
     let lowStockItems = 0;
     invSnapshot.forEach((doc) => {
       const item = doc.data();
-      const remaining = (item.quantityReceived || 0) - (item.quantitySold || 0);
+      const received = item.totalQuantity ?? item.quantityReceived ?? 0;
+      const remaining = received - (item.quantitySold || 0);
       if (remaining <= 5) lowStockItems++;
     });
 

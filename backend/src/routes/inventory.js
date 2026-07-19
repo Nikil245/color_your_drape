@@ -36,22 +36,20 @@ function deriveStatus(remaining, threshold) {
 router.post('/', validateInventory, async (req, res) => {
   try {
     const {
-      stockReceivedDate, brandName, sareeColor, materialType,
-      quantityReceived, purchasePrice, sellingPrice,
+      stockReceivedDate, brandName, variants, purchasePrice, sellingPrice,
       supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
-    const qtyReceived = Number(quantityReceived);
+    const totalQuantity = variants.reduce((sum, v) => sum + Number(v.quantity), 0);
     const qtySold = 0;
-    const qtyRemaining = qtyReceived - qtySold;
+    const qtyRemaining = totalQuantity - qtySold;
     const threshold = await getLowStockThreshold();
 
     const inventoryData = {
       stockReceivedDate: stockReceivedDate || new Date().toISOString().split('T')[0],
       brandName,
-      sareeColor,
-      materialType: materialType || '',
-      quantityReceived: qtyReceived,
+      variants,
+      totalQuantity,
       quantitySold: qtySold,
       quantityRemaining: qtyRemaining,
       status: deriveStatus(qtyRemaining, threshold),
@@ -103,10 +101,11 @@ router.get('/', async (req, res) => {
       const q = search.toLowerCase();
       items = items.filter(
         (i) =>
-          i.sareeColor?.toLowerCase().includes(q) ||
-          i.materialType?.toLowerCase().includes(q) ||
           i.brandName?.toLowerCase().includes(q) ||
-          i.supplierName?.toLowerCase().includes(q)
+          i.supplierName?.toLowerCase().includes(q) ||
+          (i.sareeColor && i.sareeColor.toLowerCase().includes(q)) ||
+          (i.materialType && i.materialType.toLowerCase().includes(q)) ||
+          (i.variants && i.variants.some((v) => v.color?.toLowerCase().includes(q) || v.material?.toLowerCase().includes(q)))
       );
     }
 
@@ -149,22 +148,21 @@ router.put('/:id', validateInventory, async (req, res) => {
     }
 
     const {
-      stockReceivedDate, brandName, sareeColor, materialType,
-      quantityReceived, quantitySold, purchasePrice,
+      stockReceivedDate, brandName, variants,
+      quantitySold, purchasePrice,
       sellingPrice, supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
-    const qtyReceived = Number(quantityReceived);
+    const totalQuantity = variants.reduce((sum, v) => sum + Number(v.quantity), 0);
     const qtySold = Number(quantitySold || 0);
-    const qtyRemaining = qtyReceived - qtySold;
+    const qtyRemaining = totalQuantity - qtySold;
     const threshold = await getLowStockThreshold();
 
     const updateData = {
       stockReceivedDate: stockReceivedDate || '',
       brandName,
-      sareeColor,
-      materialType: materialType || '',
-      quantityReceived: qtyReceived,
+      variants,
+      totalQuantity,
       quantitySold: qtySold,
       quantityRemaining: qtyRemaining,
       status: deriveStatus(qtyRemaining, threshold),
