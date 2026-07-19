@@ -19,7 +19,14 @@ router.get('/', async (req, res) => {
 
     snapshot.forEach((doc) => {
       const order = doc.data();
-      const key = order.phone || order.customerName;
+      const phone = order.phone?.trim();
+      const hasValidPhone = phone && phone !== "-" && phone !== "N/A";
+      
+      const key = hasValidPhone
+        ? `phone:${phone}`
+        : order.address?.trim()
+          ? `name:${order.customerName?.trim()}|address:${order.address?.trim()}`
+          : `name:${order.customerName?.trim()}`;
 
       if (!customerMap[key]) {
         customerMap[key] = {
