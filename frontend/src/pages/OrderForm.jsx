@@ -50,23 +50,36 @@ export default function OrderForm() {
 
   // ─── Derived dropdown options ───
 
-  // Available items (only those with remaining stock > 0, flattened for variants)
+  // Available items (only variants with remaining stock > 0, flattened)
   const availableItems = useMemo(() => {
     const flattened = [];
     inventoryItems.forEach((i) => {
-      const received = i.totalQuantity ?? i.quantityReceived ?? 0;
-      const remaining = received - (i.quantitySold || 0);
-      if (remaining > 0) {
-        if (i.variants && i.variants.length > 0) {
-          i.variants.forEach(v => {
+      if (Array.isArray(i.variants) && i.variants.length > 0) {
+        i.variants.forEach((v) => {
+          const vQty = Number(v.quantity || 0);
+          const vSold = Number(v.quantitySold || 0);
+          const vRemaining = vQty - vSold;
+          if (vRemaining > 0) {
             flattened.push({
               ...i,
               sareeColor: v.color,
               materialType: v.material,
+              variantQuantity: vQty,
+              variantQuantitySold: vSold,
+              variantQuantityRemaining: vRemaining,
             });
+          }
+        });
+      } else {
+        const received = i.totalQuantity ?? i.quantityReceived ?? 0;
+        const remaining = received - (i.quantitySold || 0);
+        if (remaining > 0) {
+          flattened.push({
+            ...i,
+            variantQuantity: received,
+            variantQuantitySold: i.quantitySold || 0,
+            variantQuantityRemaining: remaining,
           });
-        } else {
-          flattened.push(i);
         }
       }
     });
@@ -89,7 +102,7 @@ export default function OrderForm() {
     return [...new Set(types)].sort();
   }, [availableItems, formData.sareeBrand]);
 
-  // Saree colors for the selected brand + materialType (with stock info)
+  // Saree colors for the selected brand + materialType (with variant stock info)
   const colorOptions = useMemo(() => {
     if (!formData.sareeBrand || !formData.materialType) return [];
     const selectedType = formData.materialType;
@@ -97,7 +110,6 @@ export default function OrderForm() {
       .filter(
         (i) =>
           (i.brandName || '').trim() === formData.sareeBrand &&
-          // Match "Unspecified" to items with empty/missing materialType
           (selectedType === 'Unspecified'
             ? !i.materialType || i.materialType.trim() === ''
             : (i.materialType || '').trim() === selectedType)
@@ -105,43 +117,53 @@ export default function OrderForm() {
       .map((i) => ({
         id: i.id,
         color: i.sareeColor,
-        remaining: (i.totalQuantity ?? i.quantityReceived ?? 0) - (i.quantitySold || 0),
+        remaining: i.variantQuantityRemaining ?? ((i.totalQuantity ?? i.quantityReceived ?? 0) - (i.quantitySold || 0)),
         sellingPrice: i.sellingPrice,
         purchasePrice: i.purchasePrice,
-      }));
+      }))
+      .filter((c) => c.remaining > 0);
   }, [availableItems, formData.sareeBrand, formData.materialType]);
 
   const handleChange = (field, value) => {
     setFormData((p) => {
       const next = { ...p, [field]: value };
 
-      // Cascade reset: when brand changes, clear material type + color + inventory link
+      // Cascade reset: when brand changes, clear material type + color +
+      // inventory link + prices so stale values from the previous selection
+      // can never carry over to the new one.
       if (field === 'sareeBrand') {
         next.materialType = '';
         next.sareeColor = '';
         next.inventoryItemId = '';
+        next.itemPrice = '';
+        next.costPrice = '';
       }
-      // When material type changes, clear color + inventory link
+
+      // When material type changes, clear color + inventory link + prices
+      // for the same reason — the variant set is entirely different now.
       if (field === 'materialType') {
         next.sareeColor = '';
         next.inventoryItemId = '';
+        next.itemPrice = '';
+        next.costPrice = '';
       }
-      // When color changes, auto-link to inventory item and pre-fill prices
+
+      // When color changes, auto-link to the exact matched variant and
+      // ALWAYS overwrite prices — no "only if empty" guard, so switching
+      // from one colour to another always reflects the new variant's pricing.
       if (field === 'sareeColor') {
         const match = colorOptions.find((c) => c.color === value);
         if (match) {
           next.inventoryItemId = match.id;
-          // Auto-fill selling/cost price from inventory if not already set
-          if (!p.itemPrice || p.itemPrice === '') {
-            next.itemPrice = match.sellingPrice || '';
-          }
-          if (!p.costPrice || p.costPrice === '') {
-            next.costPrice = match.purchasePrice || '';
-          }
+          next.itemPrice = match.sellingPrice ?? '';
+          next.costPrice = match.purchasePrice ?? '';
         } else {
           next.inventoryItemId = '';
+          next.itemPrice = '';
+          next.costPrice = '';
         }
       }
+
       return next;
     });
   };

@@ -19,13 +19,94 @@ function deriveStatus(remaining) {
 }
 
 /**
+ * Deduct or restore stock on a specific variant inside an inventory item.
+ */
+function updateVariantStock(invData, targetColor, targetMaterial, qtyDelta, action = 'deduct') {
+  let variants = invData.variants;
+  if (!Array.isArray(variants) || variants.length === 0) {
+    const totalQ = Number(invData.totalQuantity ?? invData.quantityReceived ?? 0);
+    const totalS = Number(invData.quantitySold || 0);
+    variants = [
+      {
+        color: invData.sareeColor || 'Default',
+        material: invData.materialType || 'Default',
+        quantity: totalQ,
+        quantitySold: totalS,
+        quantityRemaining: totalQ - totalS,
+      },
+    ];
+  } else {
+    variants = variants.map((v) => ({
+      color: v.color || '',
+      material: v.material || '',
+      quantity: Number(v.quantity || 0),
+      quantitySold: Number(v.quantitySold || 0),
+      quantityRemaining: Number(v.quantity || 0) - Number(v.quantitySold || 0),
+    }));
+  }
+
+  const normColor = (targetColor || '').trim().toLowerCase();
+  const normMat = (targetMaterial || '').trim().toLowerCase();
+
+  // Find variant by color & material match
+  let variantIndex = variants.findIndex(
+    (v) =>
+      v.color.trim().toLowerCase() === normColor &&
+      (normMat === '' || v.material.trim().toLowerCase() === normMat)
+  );
+
+  // Fallback match by color only
+  if (variantIndex === -1 && normColor) {
+    variantIndex = variants.findIndex((v) => v.color.trim().toLowerCase() === normColor);
+  }
+
+  // Fallback to first variant if none matched
+  if (variantIndex === -1) {
+    variantIndex = 0;
+  }
+
+  const targetV = variants[variantIndex];
+  const vQty = Number(targetV.quantity || 0);
+  const currentVSold = Number(targetV.quantitySold || 0);
+  const vRemaining = vQty - currentVSold;
+
+  let newVSold;
+  if (action === 'deduct') {
+    if (qtyDelta > vRemaining) {
+      const desc = targetV.color ? `${targetV.material || ''} - ${targetV.color}`.trim() : 'this variant';
+      throw new Error(
+        `Only ${vRemaining} units of ${invData.brandName || 'this item'} (${desc}) remaining in stock`
+      );
+    }
+    newVSold = currentVSold + qtyDelta;
+  } else {
+    newVSold = Math.max(0, currentVSold - qtyDelta);
+  }
+
+  targetV.quantitySold = newVSold;
+  targetV.quantityRemaining = vQty - newVSold;
+
+  const docTotalQuantity = variants.reduce((sum, v) => sum + Number(v.quantity), 0);
+  const docTotalSold = variants.reduce((sum, v) => sum + Number(v.quantitySold), 0);
+  const docTotalRemaining = docTotalQuantity - docTotalSold;
+
+  return {
+    updatedVariants: variants,
+    totalQuantity: docTotalQuantity,
+    quantitySold: docTotalSold,
+    quantityRemaining: docTotalRemaining,
+    status: deriveStatus(docTotalRemaining),
+  };
+}
+
+/**
  * POST /api/orders — Create a new order
  *
  * Uses a Firestore transaction to atomically:
- *   1. Validate available stock
+ *   1. Validate available stock per-variant
  *   2. Generate the next order ID
  *   3. Create the order document
- *   4. Deduct quantity from the linked inventory item
+ *   4. Deduct quantity from the linked inventory variant
  */
 router.post('/', validateOrder, async (req, res) => {
   try {
@@ -46,12 +127,12 @@ router.post('/', validateOrder, async (req, res) => {
     const totalAmount = price * qty - disc;
     const profit = totalAmount - cost * qty;
 
-    const counterRef = db.collection('counters').doc('orders');
+    const counterRef = db.collection('settings').doc('counters');
 
     // If no inventoryItemId is provided, create order without inventory link
     if (!inventoryItemId) {
-      const counterDoc = await counterRef.get();
       let nextId = 1001;
+      const counterDoc = await counterRef.get();
       if (counterDoc.exists) nextId = counterDoc.data().lastId + 1;
       await counterRef.set({ lastId: nextId });
 
@@ -92,15 +173,8 @@ router.post('/', validateOrder, async (req, res) => {
       }
 
       const inv = invDoc.data();
-      const received = inv.totalQuantity ?? inv.quantityReceived ?? 0;
-      const currentRemaining = received - (inv.quantitySold || 0);
-
-      if (qty > currentRemaining) {
-        const itemDesc = inv.sareeColor ? `${inv.materialType || ''} - ${inv.sareeColor}` : 'this item';
-        throw new Error(
-          `Only ${currentRemaining} units of ${inv.brandName} - ${itemDesc} remaining in stock`
-        );
-      }
+      const { updatedVariants, totalQuantity, quantitySold, quantityRemaining, status } =
+        updateVariantStock(inv, sareeColor, materialType, qty, 'deduct');
 
       // Get and increment counter inside transaction
       const counterDoc = await t.get(counterRef);
@@ -108,13 +182,13 @@ router.post('/', validateOrder, async (req, res) => {
       if (counterDoc.exists) nextId = counterDoc.data().lastId + 1;
       t.set(counterRef, { lastId: nextId });
 
-      // Update inventory: increase sold, recalculate remaining & status
-      const newSold = (inv.quantitySold || 0) + qty;
-      const newRemaining = received - newSold;
+      // Update inventory
       t.update(invRef, {
-        quantitySold: newSold,
-        quantityRemaining: newRemaining,
-        status: deriveStatus(newRemaining),
+        variants: updatedVariants,
+        totalQuantity,
+        quantitySold,
+        quantityRemaining,
+        status,
         updatedAt: new Date().toISOString(),
       });
 
@@ -166,8 +240,6 @@ router.get('/', async (req, res) => {
 
     let query = db.collection('orders').orderBy('createdAt', 'desc');
 
-    // We'll fetch all and filter in memory for compound queries
-    // (Firestore compound queries need composite indexes)
     const snapshot = await query.get();
     let orders = [];
 
@@ -210,11 +282,6 @@ router.get('/', async (req, res) => {
 
 /**
  * PUT /api/orders/:id — Edit an existing order
- *
- * When quantity or inventoryItemId changes, uses a transaction to:
- *   1. Add back the old quantity to the old inventory item
- *   2. Deduct the new quantity from the new inventory item
- *   3. Validate that the new item has enough stock
  */
 router.put('/:id', validateOrder, async (req, res) => {
   try {
@@ -264,66 +331,101 @@ router.put('/:id', validateOrder, async (req, res) => {
     const newInvId = inventoryItemId || '';
     const oldQty = Number(oldOrder.quantity) || 0;
     const newQty = qty;
-    const inventoryChanged = oldInvId !== newInvId || oldQty !== newQty;
+    const oldColor = oldOrder.sareeColor || '';
+    const oldMat = oldOrder.materialType || '';
+    const newColor = sareeColor || '';
+    const newMat = materialType || '';
+
+    const inventoryChanged =
+      oldInvId !== newInvId ||
+      oldQty !== newQty ||
+      oldColor.trim().toLowerCase() !== newColor.trim().toLowerCase() ||
+      oldMat.trim().toLowerCase() !== newMat.trim().toLowerCase();
 
     // If inventory linkage or quantity changed, use a transaction
     if (inventoryChanged && (oldInvId || newInvId)) {
       await db.runTransaction(async (t) => {
-        // 1. Add back old quantity to old inventory item
+        // ─── 1. ALL READS FIRST ───
+        let oldInvDoc = null;
+        let newInvDoc = null;
+
         if (oldInvId) {
           const oldInvRef = db.collection('inventory').doc(oldInvId);
-          const oldInvDoc = await t.get(oldInvRef);
-          if (oldInvDoc.exists) {
+          oldInvDoc = await t.get(oldInvRef);
+        }
+
+        if (newInvId) {
+          if (newInvId === oldInvId) {
+            newInvDoc = oldInvDoc;
+          } else {
+            const newInvRef = db.collection('inventory').doc(newInvId);
+            newInvDoc = await t.get(newInvRef);
+          }
+        }
+
+        // ─── 2. CALCULATIONS & WRITES (NO READS PAST THIS POINT) ───
+
+        // Case A: Same inventory item, quantity changed
+        if (oldInvId && oldInvId === newInvId) {
+          if (!newInvDoc || !newInvDoc.exists) {
+            throw new Error('Linked inventory item not found.');
+          }
+
+          const inv = newInvDoc.data();
+          const restoreRes = updateVariantStock(inv, oldColor, oldMat, oldQty, 'restore');
+          const restoredInvState = { ...inv, variants: restoreRes.updatedVariants };
+          const deductRes = updateVariantStock(restoredInvState, newColor, newMat, newQty, 'deduct');
+
+          const invRef = db.collection('inventory').doc(newInvId);
+          t.update(invRef, {
+            variants: deductRes.updatedVariants,
+            totalQuantity: deductRes.totalQuantity,
+            quantitySold: deductRes.quantitySold,
+            quantityRemaining: deductRes.quantityRemaining,
+            status: deductRes.status,
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          // Case B: Different inventory items (or linking/unlinking item)
+
+          // Step B1: Restore old inventory item stock
+          if (oldInvId && oldInvDoc && oldInvDoc.exists) {
             const oldInv = oldInvDoc.data();
-            const received = oldInv.totalQuantity ?? oldInv.quantityReceived ?? 0;
-            const restoredSold = Math.max((oldInv.quantitySold || 0) - oldQty, 0);
-            const restoredRemaining = received - restoredSold;
+            const restoreRes = updateVariantStock(oldInv, oldColor, oldMat, oldQty, 'restore');
+
+            const oldInvRef = db.collection('inventory').doc(oldInvId);
             t.update(oldInvRef, {
-              quantitySold: restoredSold,
-              quantityRemaining: restoredRemaining,
-              status: deriveStatus(restoredRemaining),
+              variants: restoreRes.updatedVariants,
+              totalQuantity: restoreRes.totalQuantity,
+              quantitySold: restoreRes.quantitySold,
+              quantityRemaining: restoreRes.quantityRemaining,
+              status: restoreRes.status,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+
+          // Step B2: Deduct from new inventory item stock
+          if (newInvId) {
+            if (!newInvDoc || !newInvDoc.exists) {
+              throw new Error('Linked inventory item not found.');
+            }
+
+            const newInv = newInvDoc.data();
+            const deductRes = updateVariantStock(newInv, newColor, newMat, newQty, 'deduct');
+
+            const newInvRef = db.collection('inventory').doc(newInvId);
+            t.update(newInvRef, {
+              variants: deductRes.updatedVariants,
+              totalQuantity: deductRes.totalQuantity,
+              quantitySold: deductRes.quantitySold,
+              quantityRemaining: deductRes.quantityRemaining,
+              status: deductRes.status,
               updatedAt: new Date().toISOString(),
             });
           }
         }
 
-        // 2. Deduct new quantity from new inventory item
-        if (newInvId) {
-          const newInvRef = db.collection('inventory').doc(newInvId);
-          const newInvDoc = await t.get(newInvRef);
-          if (!newInvDoc.exists) {
-            throw new Error('Linked inventory item not found.');
-          }
-
-          const newInv = newInvDoc.data();
-          const received = newInv.totalQuantity ?? newInv.quantityReceived ?? 0;
-          // Calculate available: current remaining + what we just restored (if same item)
-          let currentSold = newInv.quantitySold || 0;
-          // If old and new inventory items are the same, we already restored above,
-          // so we need to account for that
-          if (oldInvId === newInvId) {
-            currentSold = Math.max(currentSold - oldQty, 0);
-          }
-          const currentRemaining = received - currentSold;
-
-          if (newQty > currentRemaining) {
-            const itemDesc = newInv.sareeColor ? `${newInv.materialType || ''} - ${newInv.sareeColor}` : 'this item';
-            throw new Error(
-              `Only ${currentRemaining} units of ${newInv.brandName} - ${itemDesc} remaining in stock`
-            );
-          }
-
-          const updatedSold = currentSold + newQty;
-          const updatedRemaining = received - updatedSold;
-          t.update(newInvRef, {
-            quantitySold: updatedSold,
-            quantityRemaining: updatedRemaining,
-            status: deriveStatus(updatedRemaining),
-            updatedAt: new Date().toISOString(),
-          });
-        }
-
-        // 3. Update the order
+        // Update the order document
         t.update(orderRef, updateData);
       });
 
@@ -351,9 +453,6 @@ router.put('/:id', validateOrder, async (req, res) => {
 
 /**
  * DELETE /api/orders/:id — Delete an order
- *
- * If the order is linked to an inventory item, adds the quantity back
- * (reduces quantitySold) via a transaction.
  */
 router.delete('/:id', async (req, res) => {
   try {
@@ -376,13 +475,14 @@ router.delete('/:id', async (req, res) => {
         const invDoc = await t.get(invRef);
         if (invDoc.exists) {
           const inv = invDoc.data();
-          const received = inv.totalQuantity ?? inv.quantityReceived ?? 0;
-          const restoredSold = Math.max((inv.quantitySold || 0) - qty, 0);
-          const restoredRemaining = received - restoredSold;
+          const restoreRes = updateVariantStock(inv, order.sareeColor, order.materialType, qty, 'restore');
+
           t.update(invRef, {
-            quantitySold: restoredSold,
-            quantityRemaining: restoredRemaining,
-            status: deriveStatus(restoredRemaining),
+            variants: restoreRes.updatedVariants,
+            totalQuantity: restoreRes.totalQuantity,
+            quantitySold: restoreRes.quantitySold,
+            quantityRemaining: restoreRes.quantityRemaining,
+            status: restoreRes.status,
             updatedAt: new Date().toISOString(),
           });
         }
@@ -400,3 +500,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.updateVariantStock = updateVariantStock;

@@ -40,18 +40,29 @@ router.post('/', validateInventory, async (req, res) => {
       supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
-    const totalQuantity = variants.reduce((sum, v) => sum + Number(v.quantity), 0);
+    const processedVariants = variants.map((v) => {
+      const q = Number(v.quantity);
+      return {
+        color: v.color.trim(),
+        material: v.material.trim(),
+        quantity: q,
+        quantitySold: 0,
+        quantityRemaining: q,
+      };
+    });
+
+    const totalQuantity = processedVariants.reduce((sum, v) => sum + v.quantity, 0);
     const qtySold = 0;
     const qtyRemaining = totalQuantity - qtySold;
     const threshold = await getLowStockThreshold();
 
     const inventoryData = {
       stockReceivedDate: stockReceivedDate || new Date().toISOString().split('T')[0],
-      brandName,
-      variants,
+      brandName: brandName.trim(),
+      variants: processedVariants,
       totalQuantity,
       quantitySold: qtySold,
-      quantityRemaining: qtyRemaining,
+      quantityRemaining,
       status: deriveStatus(qtyRemaining, threshold),
       purchasePrice: Number(purchasePrice),
       sellingPrice: Number(sellingPrice),
@@ -87,7 +98,48 @@ router.get('/', async (req, res) => {
     let items = [];
 
     snapshot.forEach((doc) => {
-      items.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+
+      // Normalize variants with per-variant quantitySold / quantityRemaining
+      let variants = data.variants;
+      if (Array.isArray(variants) && variants.length > 0) {
+        variants = variants.map((v) => {
+          const q = Number(v.quantity || 0);
+          const s = Number(v.quantitySold || 0);
+          return {
+            ...v,
+            quantity: q,
+            quantitySold: s,
+            quantityRemaining: q - s,
+          };
+        });
+      } else {
+        // Fallback for legacy single-item records
+        const q = Number(data.totalQuantity ?? data.quantityReceived ?? 0);
+        const s = Number(data.quantitySold || 0);
+        variants = [
+          {
+            color: data.sareeColor || 'Default',
+            material: data.materialType || 'Default',
+            quantity: q,
+            quantitySold: s,
+            quantityRemaining: q - s,
+          },
+        ];
+      }
+
+      const totalQuantity = variants.reduce((sum, v) => sum + v.quantity, 0);
+      const totalSold = variants.reduce((sum, v) => sum + v.quantitySold, 0);
+      const remaining = totalQuantity - totalSold;
+
+      items.push({
+        id: doc.id,
+        ...data,
+        variants,
+        totalQuantity,
+        quantitySold: totalSold,
+        quantityRemaining: remaining,
+      });
     });
 
     // Apply filters
@@ -141,48 +193,97 @@ router.put('/:id', validateInventory, async (req, res) => {
   try {
     const { id } = req.params;
     const docRef = db.collection('inventory').doc(id);
-    const doc = await docRef.get();
 
-    if (!doc.exists) {
+    const existenceCheck = await docRef.get();
+    if (!existenceCheck.exists) {
       return res.status(404).json({ error: 'Inventory item not found.' });
     }
 
     const {
       stockReceivedDate, brandName, variants,
-      quantitySold, purchasePrice,
-      sellingPrice, supplierName, supplierPhone, supplierAddress, remarks,
+      purchasePrice, sellingPrice,
+      supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
-    const totalQuantity = variants.reduce((sum, v) => sum + Number(v.quantity), 0);
-    const qtySold = Number(quantitySold || 0);
-    const qtyRemaining = totalQuantity - qtySold;
     const threshold = await getLowStockThreshold();
 
-    const updateData = {
-      stockReceivedDate: stockReceivedDate || '',
-      brandName,
-      variants,
-      totalQuantity,
-      quantitySold: qtySold,
-      quantityRemaining: qtyRemaining,
-      status: deriveStatus(qtyRemaining, threshold),
-      purchasePrice: Number(purchasePrice),
-      sellingPrice: Number(sellingPrice),
-      supplierName,
-      supplierPhone: supplierPhone || '',
-      supplierAddress: supplierAddress || '',
-      remarks: remarks || '',
-      updatedAt: new Date().toISOString(),
-    };
+    let updatedItem;
+    await db.runTransaction(async (t) => {
+      const currentDoc = await t.get(docRef);
+      if (!currentDoc.exists) {
+        throw new Error('Inventory item not found.');
+      }
 
-    await docRef.update(updateData);
+      const existingData = currentDoc.data();
+      const existingVariants = existingData.variants || [];
+
+      // Preserve existing per-variant quantitySold (or update if explicitly provided)
+      const updatedVariants = [];
+      for (const v of variants) {
+        const vColor = v.color.trim();
+        const vMat = v.material.trim();
+        const vQty = Number(v.quantity);
+
+        const existingV = existingVariants.find(
+          (ev) =>
+            (ev.color || '').trim().toLowerCase() === vColor.toLowerCase() &&
+            (ev.material || '').trim().toLowerCase() === vMat.toLowerCase()
+        );
+
+        let vSold = 0;
+        if (typeof v.quantitySold === 'number') {
+          vSold = Math.max(0, Number(v.quantitySold));
+        } else if (existingV && typeof existingV.quantitySold === 'number') {
+          vSold = Math.max(0, Number(existingV.quantitySold));
+        }
+
+        if (vQty < vSold) {
+          throw new Error(`Cannot set quantity for ${vColor} (${vMat}) to ${vQty} because ${vSold} units have already been sold.`);
+        }
+
+        updatedVariants.push({
+          color: vColor,
+          material: vMat,
+          quantity: vQty,
+          quantitySold: vSold,
+          quantityRemaining: vQty - vSold,
+        });
+      }
+
+      const totalQuantity = updatedVariants.reduce((sum, v) => sum + v.quantity, 0);
+      const totalSold = updatedVariants.reduce((sum, v) => sum + v.quantitySold, 0);
+      const qtyRemaining = totalQuantity - totalSold;
+
+      const updateData = {
+        stockReceivedDate: stockReceivedDate || '',
+        brandName: brandName.trim(),
+        variants: updatedVariants,
+        totalQuantity,
+        quantitySold: totalSold,
+        quantityRemaining: qtyRemaining,
+        status: deriveStatus(qtyRemaining, threshold),
+        purchasePrice: Number(purchasePrice),
+        sellingPrice: Number(sellingPrice),
+        supplierName,
+        supplierPhone: supplierPhone || '',
+        supplierAddress: supplierAddress || '',
+        remarks: remarks || '',
+        updatedAt: new Date().toISOString(),
+      };
+
+      t.update(docRef, updateData);
+      updatedItem = { id, ...existingData, ...updateData };
+    });
 
     return res.json({
       message: 'Inventory item updated successfully.',
-      item: { id, ...doc.data(), ...updateData },
+      item: updatedItem,
     });
   } catch (err) {
     console.error('Update inventory error:', err);
+    if (err.message && (err.message.includes('Inventory item not found.') || err.message.includes('because'))) {
+      return res.status(400).json({ error: err.message });
+    }
     return res.status(500).json({ error: 'Failed to update inventory item.' });
   }
 });

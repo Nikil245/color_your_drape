@@ -86,12 +86,19 @@ export default function Inventory() {
     setEditData({
       stockReceivedDate: item.stockReceivedDate || '',
       brandName: item.brandName,
-      variants: item.variants && item.variants.length > 0 ? item.variants : [{
-        color: item.sareeColor || '',
-        material: item.materialType || '',
-        quantity: item.quantityReceived || 0
-      }],
-      quantitySold: item.quantitySold || 0,
+      variants: item.variants && item.variants.length > 0
+        ? item.variants.map((v) => ({
+            color: v.color || '',
+            material: v.material || '',
+            quantity: v.quantity || 0,
+            quantitySold: v.quantitySold || 0,
+          }))
+        : [{
+            color: item.sareeColor || '',
+            material: item.materialType || '',
+            quantity: item.quantityReceived || 0,
+            quantitySold: item.quantitySold || 0,
+          }],
       purchasePrice: item.purchasePrice, sellingPrice: item.sellingPrice,
       supplierName: item.supplierName,
       supplierPhone: item.supplierPhone || '',
@@ -111,7 +118,7 @@ export default function Inventory() {
       fetchItems();
       fetchBrands();
     } catch (err) {
-      addToast(err.response?.data?.errors?.[0]?.msg || 'Failed to update', 'error');
+      addToast(err.response?.data?.error || err.response?.data?.errors?.[0]?.msg || 'Failed to update', 'error');
     } finally { setEditSaving(false); }
   };
 
@@ -421,49 +428,73 @@ export default function Inventory() {
               </section>
 
               <section className="drawer-section">
-                <h4 className="drawer-section-title">Variants</h4>
+                <h4 className="drawer-section-title">Variants (Per-Color Stock)</h4>
                 <div className="drawer-fields" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {editData.variants.map((v, idx) => (
-                    <div key={idx} className="variant-row glass-card heritage-border" style={{ display: 'flex', gap: '12px', padding: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                      <div className="drawer-field" style={{ flex: '1 1 150px' }}>
-                        <label className="form-label" style={{fontSize:12}}>Color</label>
-                        <input className="form-input drawer-input" value={v.color}
-                          onChange={(e) => {
-                            const newV = [...editData.variants];
-                            newV[idx].color = e.target.value;
+                  {editData.variants.map((v, idx) => {
+                    const q = Number(v.quantity) || 0;
+                    const s = Number(v.quantitySold) || 0;
+                    const rem = q - s;
+                    return (
+                      <div key={idx} className="variant-row glass-card heritage-border" style={{ display: 'flex', gap: '10px', padding: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div className="drawer-field" style={{ flex: '1 1 140px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Color</label>
+                          <input className="form-input drawer-input" value={v.color}
+                            onChange={(e) => {
+                              const newV = [...editData.variants];
+                              newV[idx].color = e.target.value;
+                              handleEditChange('variants', newV);
+                            }} required />
+                        </div>
+                        <div className="drawer-field" style={{ flex: '1 1 140px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Material</label>
+                          <input className="form-input drawer-input" value={v.material}
+                            onChange={(e) => {
+                              const newV = [...editData.variants];
+                              newV[idx].material = e.target.value;
+                              handleEditChange('variants', newV);
+                            }} required />
+                        </div>
+                        <div className="drawer-field" style={{ flex: '0 1 80px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Total Qty</label>
+                          <input type="number" min="1" className="form-input drawer-input" value={v.quantity}
+                            onChange={(e) => {
+                              const newV = [...editData.variants];
+                              newV[idx].quantity = e.target.value;
+                              handleEditChange('variants', newV);
+                            }} required />
+                        </div>
+                        <div className="drawer-field" style={{ flex: '0 1 80px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Qty Sold</label>
+                          <input type="number" min="0" className="form-input drawer-input" value={v.quantitySold ?? 0}
+                            onChange={(e) => {
+                              const newV = [...editData.variants];
+                              newV[idx].quantitySold = Number(e.target.value);
+                              handleEditChange('variants', newV);
+                            }} />
+                        </div>
+                        <div className="drawer-field" style={{ flex: '0 1 70px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Left</label>
+                          <div className="form-input drawer-input" style={{
+                            backgroundColor: 'var(--color-surface-variant)',
+                            fontWeight: 'bold',
+                            color: rem > 5 ? 'var(--color-tertiary)' : rem > 0 ? 'var(--color-gold)' : 'var(--color-error)'
+                          }}>
+                            {rem}
+                          </div>
+                        </div>
+                        {idx > 0 && (
+                          <button type="button" className="action-btn action-btn-delete" onClick={() => {
+                            const newV = editData.variants.filter((_, i) => i !== idx);
                             handleEditChange('variants', newV);
-                          }} required />
+                          }} style={{ marginTop: '24px' }}>
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        )}
                       </div>
-                      <div className="drawer-field" style={{ flex: '1 1 150px' }}>
-                        <label className="form-label" style={{fontSize:12}}>Material</label>
-                        <input className="form-input drawer-input" value={v.material}
-                          onChange={(e) => {
-                            const newV = [...editData.variants];
-                            newV[idx].material = e.target.value;
-                            handleEditChange('variants', newV);
-                          }} required />
-                      </div>
-                      <div className="drawer-field" style={{ flex: '0 1 100px' }}>
-                        <label className="form-label" style={{fontSize:12}}>Quantity</label>
-                        <input type="number" min="1" className="form-input drawer-input" value={v.quantity}
-                          onChange={(e) => {
-                            const newV = [...editData.variants];
-                            newV[idx].quantity = e.target.value;
-                            handleEditChange('variants', newV);
-                          }} required />
-                      </div>
-                      {idx > 0 && (
-                        <button type="button" className="action-btn action-btn-delete" onClick={() => {
-                          const newV = editData.variants.filter((_, i) => i !== idx);
-                          handleEditChange('variants', newV);
-                        }} style={{ marginTop: '24px' }}>
-                          <span className="material-symbols-outlined">delete</span>
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                   <button type="button" className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => {
-                    handleEditChange('variants', [...editData.variants, { color: '', material: '', quantity: '' }]);
+                    handleEditChange('variants', [...editData.variants, { color: '', material: '', quantity: '', quantitySold: 0 }]);
                   }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span> Add Variant
                   </button>
@@ -501,18 +532,29 @@ export default function Inventory() {
                   </div>
                   <div className="drawer-field">
                     <label className="form-label" style={{fontSize:12}}>Qty Sold <span style={{color:'var(--color-on-surface-variant)', fontWeight:400}}>(auto-updated from orders)</span></label>
-                    <input type="number" min="0" className="form-input drawer-input" value={editData.quantitySold}
+                    {/* Read from editDrawer (original snapshot) — not editData, since
+                        quantitySold is excluded from the edit payload intentionally. */}
+                    <input type="number" min="0" className="form-input drawer-input" value={editDrawer?.quantitySold || 0}
                       readOnly disabled style={{opacity:0.6, cursor:'not-allowed'}} />
                   </div>
                   <div className="drawer-field" style={{gridColumn:'1/-1'}}>
                     <label className="form-label" style={{fontSize:12}}>Remaining (auto-calculated)</label>
                     <div className="total-display">
-                      {editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0) - Number(editData.quantitySold || 0)} units
-                      {' '}— <span className={`badge ${statusBadgeClass(
-                        deriveStatus(editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0) - Number(editData.quantitySold || 0))
-                      )}`}>
-                        {deriveStatus(editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0) - Number(editData.quantitySold || 0))}
-                      </span>
+                      {(() => {
+                        // Use editDrawer's quantitySold (original snapshot) since
+                        // quantitySold is excluded from editData intentionally.
+                        const soldSoFar = editDrawer?.quantitySold || 0;
+                        const newTotal = editData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
+                        const remaining = newTotal - soldSoFar;
+                        return (
+                          <>
+                            {remaining} units
+                            {' '}— <span className={`badge ${statusBadgeClass(deriveStatus(remaining))}`}>
+                              {deriveStatus(remaining)}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

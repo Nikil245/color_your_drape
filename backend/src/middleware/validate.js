@@ -68,6 +68,7 @@ const validateInventory = [
   body('variants.*.color').trim().notEmpty().withMessage('Variant color is required').escape(),
   body('variants.*.material').trim().notEmpty().withMessage('Variant material is required').escape(),
   body('variants.*.quantity').isInt({ min: 1 }).withMessage('Variant quantity must be a positive integer'),
+  body('variants.*.quantitySold').optional({ checkFalsy: true }).isInt({ min: 0 }).withMessage('Variant quantity sold must be a non-negative integer'),
   body('quantitySold').optional({ checkFalsy: true }).isInt({ min: 0 }).withMessage('Quantity sold must be a non-negative integer'),
   body('purchasePrice').isFloat({ min: 0 }).withMessage('Purchase price must be a positive number'),
   body('sellingPrice').isFloat({ min: 0 }).withMessage('Selling price must be a positive number'),
