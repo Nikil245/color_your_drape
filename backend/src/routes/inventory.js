@@ -62,7 +62,7 @@ router.post('/', validateInventory, async (req, res) => {
       variants: processedVariants,
       totalQuantity,
       quantitySold: qtySold,
-      quantityRemaining,
+      quantityRemaining: qtyRemaining,
       status: deriveStatus(qtyRemaining, threshold),
       purchasePrice: Number(purchasePrice),
       sellingPrice: Number(sellingPrice),
