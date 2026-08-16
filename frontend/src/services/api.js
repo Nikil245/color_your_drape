@@ -45,7 +45,7 @@ export const customersAPI = {
 
 // ─── Dashboard ───
 export const dashboardAPI = {
-  summary: () => api.get('/dashboard/summary'),
+  summary: (period) => api.get('/dashboard/summary', { params: period ? { period } : {} }),
 };
 
 // ─── Inventory ───

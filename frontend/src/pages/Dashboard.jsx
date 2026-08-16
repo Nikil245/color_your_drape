@@ -33,13 +33,38 @@ const statusBadgeClass = (status) => {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('this_month');
+  const [periodLoading, setPeriodLoading] = useState(false);
+
+  const fetchDashboard = (period, isInitial = false) => {
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setPeriodLoading(true);
+    }
+
+    dashboardAPI.summary(period)
+      .then((res) => {
+        setData(res.data);
+        if (res.data?.selectedPeriod) {
+          setSelectedPeriod(res.data.selectedPeriod);
+        }
+      })
+      .catch((err) => console.error('Dashboard fetch error:', err))
+      .finally(() => {
+        setLoading(false);
+        setPeriodLoading(false);
+      });
+  };
 
   useEffect(() => {
-    dashboardAPI.summary()
-      .then((res) => setData(res.data))
-      .catch((err) => console.error('Dashboard fetch error:', err))
-      .finally(() => setLoading(false));
+    fetchDashboard('this_month', true);
   }, []);
+
+  const handlePeriodChange = (newPeriod) => {
+    setSelectedPeriod(newPeriod);
+    fetchDashboard(newPeriod, false);
+  };
 
   if (loading) {
     return (
@@ -59,7 +84,7 @@ export default function Dashboard() {
     );
   }
 
-  const { kpis, charts, recentOrders } = data;
+  const { kpis, charts, recentOrders, availableMonths } = data;
 
   // Sales & Profit chart data
   const salesTrendData = charts.salesTrend || [];
@@ -149,10 +174,44 @@ export default function Dashboard() {
             Welcome back, here is your artisanal boutique's performance.
           </p>
         </div>
+
+        {/* Period Filter Dropdown */}
+        <div className="period-filter-wrap">
+          <label htmlFor="dashboard-period-select" className="period-filter-label">
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--color-gold)' }}>
+              calendar_month
+            </span>
+            <span>Period:</span>
+          </label>
+          <select
+            id="dashboard-period-select"
+            className="period-select"
+            value={selectedPeriod}
+            onChange={(e) => handlePeriodChange(e.target.value)}
+            disabled={periodLoading}
+          >
+            <option value="this_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="last_3_months">Last 3 Months</option>
+            <option value="last_6_months">Last 6 Months</option>
+            <option value="this_year">This Year</option>
+            <option value="all_time">All Time</option>
+            {availableMonths && availableMonths.length > 0 && (
+              <optgroup label="Specific Months">
+                {availableMonths.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          {periodLoading && <div className="period-spinner" />}
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="kpi-grid">
+      <div className={`kpi-grid ${periodLoading ? 'period-refetching' : ''}`}>
         {kpiConfig.map((kpi) => (
           <div key={kpi.key} className="kpi-card glass-card" style={{ borderTopColor: kpi.borderColor }}>
             <div className="kpi-card-top">
@@ -171,7 +230,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Grid */}
-      <div className="charts-grid">
+      <div className={`charts-grid ${periodLoading ? 'period-refetching' : ''}`}>
         {/* Sales & Profit Chart */}
         <div className="glass-card chart-main">
           <div className="chart-header">

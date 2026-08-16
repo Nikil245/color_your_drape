@@ -15,6 +15,77 @@
   flex-wrap: wrap;
 }
 
+/* ─── Period Filter Dropdown ─── */
+.period-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-card);
+  padding: 8px 16px;
+  border-radius: var(--radius-default);
+  border: 1px solid var(--color-gold);
+  box-shadow: var(--shadow-ambient);
+  transition: box-shadow 0.2s;
+}
+
+.period-filter-wrap:hover {
+  box-shadow: var(--shadow-interactive);
+}
+
+.period-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+}
+
+.period-select {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-default);
+  padding: 8px 36px 8px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-background);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23C9A227' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.period-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.period-select:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.period-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-outline-variant);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.period-refetching {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
 /* ─── KPI Grid ─── */
 .kpi-grid {
   display: grid;
