@@ -54,16 +54,21 @@ export default function OrderForm() {
   const availableItems = useMemo(() => {
     const flattened = [];
     inventoryItems.forEach((i) => {
+      const brand = (i.brandName || '').trim();
+      const parentMaterial = (i.materialType || '').trim();
+
       if (Array.isArray(i.variants) && i.variants.length > 0) {
         i.variants.forEach((v) => {
           const vQty = Number(v.quantity || 0);
           const vSold = Number(v.quantitySold || 0);
           const vRemaining = vQty - vSold;
           if (vRemaining > 0) {
+            const variantMaterial = (v.material || '').trim() || parentMaterial;
             flattened.push({
               ...i,
-              sareeColor: v.color,
-              materialType: v.material,
+              brandName: brand,
+              sareeColor: (v.color || '').trim(),
+              materialType: variantMaterial,
               variantQuantity: vQty,
               variantQuantitySold: vSold,
               variantQuantityRemaining: vRemaining,
@@ -76,6 +81,9 @@ export default function OrderForm() {
         if (remaining > 0) {
           flattened.push({
             ...i,
+            brandName: brand,
+            sareeColor: (i.sareeColor || '').trim(),
+            materialType: parentMaterial,
             variantQuantity: received,
             variantQuantitySold: i.quantitySold || 0,
             variantQuantityRemaining: remaining,
@@ -96,8 +104,9 @@ export default function OrderForm() {
   // If old records have no materialType, show them under "Unspecified"
   const materialTypeOptions = useMemo(() => {
     if (!formData.sareeBrand) return [];
+    const selectedBrandNorm = formData.sareeBrand.trim().toLowerCase();
     const types = availableItems
-      .filter((i) => (i.brandName || '').trim() === formData.sareeBrand)
+      .filter((i) => (i.brandName || '').trim().toLowerCase() === selectedBrandNorm)
       .map((i) => (i.materialType || '').trim() || 'Unspecified');
     return [...new Set(types)].sort();
   }, [availableItems, formData.sareeBrand]);
@@ -105,18 +114,28 @@ export default function OrderForm() {
   // Saree colors for the selected brand + materialType (with variant stock info)
   const colorOptions = useMemo(() => {
     if (!formData.sareeBrand || !formData.materialType) return [];
-    const selectedType = formData.materialType;
+    const selectedBrandNorm = formData.sareeBrand.trim().toLowerCase();
+    const selectedMaterial = formData.materialType.trim();
+    const selectedMaterialNorm = selectedMaterial.toLowerCase();
+
     return availableItems
-      .filter(
-        (i) =>
-          (i.brandName || '').trim() === formData.sareeBrand &&
-          (selectedType === 'Unspecified'
-            ? !i.materialType || i.materialType.trim() === ''
-            : (i.materialType || '').trim() === selectedType)
-      )
+      .filter((i) => {
+        const itemBrandNorm = (i.brandName || '').trim().toLowerCase();
+        const itemMaterial = (i.materialType || '').trim();
+        const itemMaterialNorm = itemMaterial.toLowerCase();
+
+        const brandMatches = itemBrandNorm === selectedBrandNorm;
+        const materialMatches =
+          selectedMaterialNorm === 'unspecified'
+            ? !itemMaterial || itemMaterial === ''
+            : itemMaterialNorm === selectedMaterialNorm;
+
+        return brandMatches && materialMatches;
+      })
       .map((i) => ({
         id: i.id,
         color: i.sareeColor,
+        material: i.materialType,
         remaining: i.variantQuantityRemaining ?? ((i.totalQuantity ?? i.quantityReceived ?? 0) - (i.quantitySold || 0)),
         sellingPrice: i.sellingPrice,
         purchasePrice: i.purchasePrice,
@@ -152,7 +171,8 @@ export default function OrderForm() {
       // ALWAYS overwrite prices — no "only if empty" guard, so switching
       // from one colour to another always reflects the new variant's pricing.
       if (field === 'sareeColor') {
-        const match = colorOptions.find((c) => c.color === value);
+        const valNorm = (value || '').trim().toLowerCase();
+        const match = colorOptions.find((c) => (c.color || '').trim().toLowerCase() === valNorm);
         if (match) {
           next.inventoryItemId = match.id;
           next.itemPrice = match.sellingPrice ?? '';
@@ -177,7 +197,8 @@ export default function OrderForm() {
 
   // Find the selected inventory item's remaining stock for display
   const selectedStock = useMemo(() => {
-    const match = colorOptions.find((c) => c.color === formData.sareeColor);
+    const colorNorm = (formData.sareeColor || '').trim().toLowerCase();
+    const match = colorOptions.find((c) => (c.color || '').trim().toLowerCase() === colorNorm);
     return match ? match.remaining : null;
   }, [colorOptions, formData.sareeColor]);
 
@@ -273,8 +294,8 @@ export default function OrderForm() {
               ) : (
                 <>
                   <option value="">— Select Color —</option>
-                  {colorOptions.map((c) => (
-                    <option key={c.id} value={c.color}>
+                  {colorOptions.map((c, idx) => (
+                    <option key={`${c.id}-${c.color}-${idx}`} value={c.color}>
                       {c.color} ({c.remaining} left)
                     </option>
                   ))}
