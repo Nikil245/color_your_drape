@@ -7,6 +7,19 @@ const router = express.Router();
 router.use(authMiddleware);
 
 /**
+ * Build a canonical customer key from an order.
+ * Customers with a valid phone are keyed by phone; otherwise by name (+address if available).
+ */
+function customerKey(order) {
+  const phone = order.phone?.trim();
+  const hasValidPhone = phone && phone !== '-' && phone !== 'N/A';
+
+  if (hasValidPhone) return `phone:${phone}`;
+  if (order.address?.trim()) return `name:${order.customerName?.trim()}|address:${order.address?.trim()}`;
+  return `name:${order.customerName?.trim()}`;
+}
+
+/**
  * GET /api/customers
  * Auto-derived from unique customers across orders.
  * Returns each unique customer with Total Orders and Total Spend calculated.
@@ -19,14 +32,7 @@ router.get('/', async (req, res) => {
 
     snapshot.forEach((doc) => {
       const order = doc.data();
-      const phone = order.phone?.trim();
-      const hasValidPhone = phone && phone !== "-" && phone !== "N/A";
-      
-      const key = hasValidPhone
-        ? `phone:${phone}`
-        : order.address?.trim()
-          ? `name:${order.customerName?.trim()}|address:${order.address?.trim()}`
-          : `name:${order.customerName?.trim()}`;
+      const key = customerKey(order);
 
       if (!customerMap[key]) {
         customerMap[key] = {
@@ -61,7 +67,7 @@ router.get('/', async (req, res) => {
       }
     });
 
-    let customers = Object.values(customerMap);
+    let customers = Object.entries(customerMap).map(([key, c]) => ({ ...c, _key: key }));
 
     // Apply search filter
     if (search) {
@@ -81,6 +87,74 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Customers error:', err);
     return res.status(500).json({ error: 'Failed to fetch customers.' });
+  }
+});
+
+/**
+ * GET /api/customers/:key
+ * Fetch a single customer's full profile and complete order history.
+ * :key is a URI-encoded customer key (e.g. "phone:9876543210" or "name:Manasa|address:Udupi").
+ */
+router.get('/:key', async (req, res) => {
+  try {
+    const requestedKey = decodeURIComponent(req.params.key);
+    const snapshot = await db.collection('orders').get();
+    const orders = [];
+    let customer = null;
+
+    snapshot.forEach((doc) => {
+      const order = { id: doc.id, ...doc.data() };
+      const key = customerKey(order);
+
+      if (key === requestedKey) {
+        orders.push(order);
+        if (!customer) {
+          customer = {
+            name: order.customerName,
+            phone: order.phone,
+            address: order.address,
+            platform: order.platform,
+            customerStatus: order.customerStatus || 'New',
+          };
+        }
+      }
+    });
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found.' });
+    }
+
+    // Sort orders by date descending
+    orders.sort((a, b) => (b.orderPlacedDate || b.createdAt || '').localeCompare(a.orderPlacedDate || a.createdAt || ''));
+
+    const totalOrders = orders.length;
+    const totalSpend = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalSpend / totalOrders) : 0;
+
+    // Update status based on total orders
+    if (totalOrders >= 10) customer.customerStatus = 'VIP';
+    else if (totalOrders >= 3) customer.customerStatus = 'Repeat';
+
+    // Payment status breakdown
+    const paymentBreakdown = { Paid: 0, Pending: 0, Partial: 0 };
+    orders.forEach((o) => {
+      const ps = o.paymentStatus || 'Pending';
+      paymentBreakdown[ps] = (paymentBreakdown[ps] || 0) + 1;
+    });
+
+    return res.json({
+      customer: {
+        ...customer,
+        totalOrders,
+        totalSpend,
+        avgOrderValue,
+        paymentBreakdown,
+      },
+      orders,
+    });
+  } catch (err) {
+    console.error('Customer detail error:', err);
+    return res.status(500).json({ error: 'Failed to fetch customer details.' });
   }
 });
 

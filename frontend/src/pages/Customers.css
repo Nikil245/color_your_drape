@@ -25,9 +25,14 @@
 .cust-row {
   padding: 16px; border-bottom: 1px solid var(--color-outline-variant);
   transition: background 0.2s;
+  cursor: pointer;
 }
 .cust-row:last-child { border-bottom: none; }
 .cust-row:hover { background: var(--color-surface-container-low); }
+.cust-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
 
 .cust-col-3 { }
 .cust-col-2 { }
@@ -49,6 +54,96 @@
 }
 .cust-stat-value { font-weight: 500; }
 .cust-status-col { margin-top: 12px; }
+
+/* ═══════════════════════════════════════════
+   Customer Detail Drawer
+   ═══════════════════════════════════════════ */
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 60;
+}
+.cust-detail-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 100%; max-width: 560px;
+  background: var(--color-card); border-left: 1px solid rgba(224,190,196,0.3);
+  box-shadow: var(--shadow-interactive); z-index: 70;
+  display: flex; flex-direction: column;
+}
+
+/* ── Summary Stats Row ── */
+.cust-detail-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+}
+.cust-detail-stat-card {
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 12px; padding: 14px 12px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; text-align: center;
+}
+.cust-detail-stat-icon { font-size: 22px; }
+.cust-detail-stat-value {
+  font-family: var(--font-display); font-size: 18px; font-weight: 700;
+  color: var(--color-on-surface); line-height: 1.2;
+}
+.cust-detail-stat-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--color-on-surface-variant);
+}
+
+/* ── Payment Breakdown Badges ── */
+.cust-detail-payment-breakdown {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+/* ── Customer Info Grid ── */
+.cust-detail-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+.cust-detail-info-item {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.cust-detail-info-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--color-on-surface-variant);
+  margin-bottom: 2px;
+}
+.cust-detail-info-value {
+  font-size: 14px; font-weight: 500; color: var(--color-on-surface);
+  word-break: break-word;
+}
+
+/* ── Order History Cards ── */
+.cust-detail-orders {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.cust-detail-order-card {
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  border-left: 3px solid var(--color-gold);
+  border-radius: 10px; overflow: hidden;
+}
+.cust-detail-order-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 234, 224, 0.4);
+  border-bottom: 1px solid rgba(224, 190, 196, 0.2);
+}
+.cust-detail-order-id {
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  color: var(--color-primary); letter-spacing: 0.02em;
+}
+.cust-detail-order-body { padding: 10px 14px; }
+.cust-detail-order-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; font-size: 13px; color: var(--color-on-surface);
+}
+.cust-detail-order-row + .cust-detail-order-row {
+  border-top: 1px solid rgba(224, 190, 196, 0.15);
+}
+.cust-detail-order-label {
+  font-weight: 600; color: var(--color-on-surface-variant);
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;
+}
 
 /* ─── Desktop Layout ─── */
 @media (min-width: 769px) {
@@ -90,4 +185,22 @@
   }
   .customer-search-wrap { width: 100%; }
   .customers-actions { width: 100%; }
+
+  /* Detail drawer — full screen on mobile */
+  .cust-detail-drawer {
+    max-width: 100%; width: 100%;
+    border-left: none; border-radius: 0;
+  }
+
+  .cust-detail-stats {
+    grid-template-columns: 1fr;
+  }
+  .cust-detail-stat-card {
+    flex-direction: row; justify-content: flex-start; gap: 12px;
+    text-align: left; padding: 12px 14px;
+  }
+
+  .cust-detail-info-grid {
+    grid-template-columns: 1fr;
+  }
 }

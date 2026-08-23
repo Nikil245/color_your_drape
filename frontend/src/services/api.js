@@ -41,6 +41,7 @@ export const ordersAPI = {
 // ─── Customers ───
 export const customersAPI = {
   list: (params) => api.get('/customers', { params }),
+  getByKey: (key) => api.get(`/customers/${encodeURIComponent(key)}`),
 };
 
 // ─── Dashboard ───
