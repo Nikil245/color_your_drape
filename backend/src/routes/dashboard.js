@@ -124,11 +124,16 @@ router.get('/summary', async (req, res) => {
     });
 
     // ─── KPIs ───
-    // Period-filtered KPIs
-    const totalSales = filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-    const totalProfit = filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0);
+    // Filter paid orders specifically for Sales and Profit calculations
+    const paidOrders = filteredOrders.filter((o) => o.paymentStatus === 'Paid');
+
+    const totalSales = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const totalProfit = paidOrders.reduce((sum, o) => sum + (o.profit || 0), 0);
+
+    // KPIs reflecting ALL orders regardless of payment status
     const totalOrders = filteredOrders.length;
-    const avgOrderValue = totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0;
+    const totalGrossValue = filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalGrossValue / totalOrders) : 0;
 
     // Real-time Current State KPIs (NOT filtered by period)
     const pendingDeliveries = allOrders.filter(
@@ -144,7 +149,7 @@ router.get('/summary', async (req, res) => {
       if (remaining <= 5) lowStockItems++;
     });
 
-    // ─── Chart Data: Sales & Profit Trend (Scoped Time Series) ───
+    // ─── Chart Data: Sales & Profit Trend (Scoped Time Series, Paid Orders Only) ───
     const periodsList = [];
     const aggregated = {};
 
@@ -161,10 +166,12 @@ router.get('/summary', async (req, res) => {
       }
 
       filteredOrders.forEach((o) => {
-        const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
-        if (dateStr && aggregated[dateStr]) {
-          aggregated[dateStr].sales += (o.totalAmount || 0);
-          aggregated[dateStr].profit += (o.profit || 0);
+        if (o.paymentStatus === 'Paid') {
+          const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
+          if (dateStr && aggregated[dateStr]) {
+            aggregated[dateStr].sales += (o.totalAmount || 0);
+            aggregated[dateStr].profit += (o.profit || 0);
+          }
         }
       });
     } else {
@@ -209,12 +216,14 @@ router.get('/summary', async (req, res) => {
       }
 
       filteredOrders.forEach((o) => {
-        const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
-        if (dateStr) {
-          const yyyyMm = dateStr.substring(0, 7);
-          if (aggregated[yyyyMm]) {
-            aggregated[yyyyMm].sales += (o.totalAmount || 0);
-            aggregated[yyyyMm].profit += (o.profit || 0);
+        if (o.paymentStatus === 'Paid') {
+          const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
+          if (dateStr) {
+            const yyyyMm = dateStr.substring(0, 7);
+            if (aggregated[yyyyMm]) {
+              aggregated[yyyyMm].sales += (o.totalAmount || 0);
+              aggregated[yyyyMm].profit += (o.profit || 0);
+            }
           }
         }
       });

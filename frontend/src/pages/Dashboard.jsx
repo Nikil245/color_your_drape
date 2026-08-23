@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('this_month');
   const [periodLoading, setPeriodLoading] = useState(false);
+  const location = useLocation();
 
   const fetchDashboard = (period, isInitial = false) => {
     if (isInitial) {
@@ -57,9 +58,14 @@ export default function Dashboard() {
       });
   };
 
+  // Re-fetch fresh data every time the user navigates to the Dashboard route.
+  // location.key changes on every navigation event in React Router v6, so this
+  // fires both on first mount AND whenever the user returns to this page from
+  // another route — fixing the stale KPI data bug.
   useEffect(() => {
+    setSelectedPeriod('this_month');
     fetchDashboard('this_month', true);
-  }, []);
+  }, [location.key]);
 
   const handlePeriodChange = (newPeriod) => {
     setSelectedPeriod(newPeriod);
