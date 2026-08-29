@@ -8,6 +8,7 @@ const authRoutes = require('./src/routes/auth');
 const orderRoutes = require('./src/routes/orders');
 const customerRoutes = require('./src/routes/customers');
 const dashboardRoutes = require('./src/routes/dashboard');
+const reportRoutes = require('./src/routes/reports');
 const inventoryRoutes = require('./src/routes/inventory');
 const settingsRoutes = require('./src/routes/settings');
 
@@ -40,6 +41,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/settings', settingsRoutes);
 

@@ -49,6 +49,11 @@ export const dashboardAPI = {
   summary: (period) => api.get('/dashboard/summary', { params: period ? { period } : {} }),
 };
 
+// ─── Reports ───
+export const reportsAPI = {
+  summary: (params) => api.get('/reports/summary', { params }),
+};
+
 // ─── Inventory ───
 export const inventoryAPI = {
   create: (data) => api.post('/inventory', data),

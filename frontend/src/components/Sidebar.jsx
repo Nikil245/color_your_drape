@@ -15,6 +15,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const navItems = [
     { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
+    { to: '/reports', icon: 'summarize', label: 'Reports' },
     { to: '/orders', icon: 'shopping_bag', label: 'Orders' },
     { to: '/customers', icon: 'group', label: 'Customers' },
     { to: '/inventory', icon: 'inventory_2', label: 'Inventory' },

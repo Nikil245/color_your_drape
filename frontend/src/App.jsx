@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import SignIn from './pages/SignIn';
 import Dashboard from './pages/Dashboard';
+import Reports from './pages/Reports';
 import Orders from './pages/Orders';
 import Customers from './pages/Customers';
 import Inventory from './pages/Inventory';
@@ -24,6 +25,7 @@ export default function App() {
               {/* Protected routes with sidebar layout */}
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/reports" element={<Reports />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/inventory" element={<Inventory />} />
