@@ -23,15 +23,32 @@ function customerKey(order) {
  * GET /api/customers
  * Auto-derived from unique customers across orders.
  * Returns each unique customer with Total Orders and Total Spend calculated.
+ * Query params: search, month (YYYY-MM or 'all')
  */
 router.get('/', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, month } = req.query;
     const snapshot = await db.collection('orders').get();
     const customerMap = {};
+    const monthSet = new Set();
 
     snapshot.forEach((doc) => {
       const order = doc.data();
+      const dateStr = order.orderPlacedDate || order.createdAt;
+      if (dateStr && typeof dateStr === 'string' && dateStr.length >= 7) {
+        const ym = dateStr.substring(0, 7);
+        if (/^\d{4}-\d{2}$/.test(ym)) {
+          monthSet.add(ym);
+        }
+      }
+
+      // Filter by month BEFORE grouping into customer totals
+      if (month && month !== 'all') {
+        if (!dateStr || typeof dateStr !== 'string' || !dateStr.startsWith(month)) {
+          return;
+        }
+      }
+
       const key = customerKey(order);
 
       if (!customerMap[key]) {
@@ -83,7 +100,16 @@ router.get('/', async (req, res) => {
     // Sort by total spend descending (VIP / top customers first)
     customers.sort((a, b) => b.totalSpend - a.totalSpend);
 
-    return res.json({ customers, total: customers.length });
+    const availableMonths = Array.from(monthSet)
+      .sort((a, b) => b.localeCompare(a))
+      .map((ym) => {
+        const [yyyy, mm] = ym.split('-');
+        const date = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, 1);
+        const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return { value: ym, label };
+      });
+
+    return res.json({ customers, total: customers.length, availableMonths });
   } catch (err) {
     console.error('Customers error:', err);
     return res.status(500).json({ error: 'Failed to fetch customers.' });

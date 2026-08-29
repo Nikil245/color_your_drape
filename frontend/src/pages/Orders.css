@@ -83,15 +83,23 @@
 
 /* ─── History Table ─── */
 .history-table-wrap { padding: var(--space-md); overflow: hidden; }
-.history-table-scroll { overflow-x: auto; }
+.history-table-scroll {
+  max-height: calc(100vh - 260px);
+  min-height: 200px;
+  overflow: auto;
+}
 .history-table {
-  width: 100%; text-align: left; border-collapse: collapse;
+  width: 100%; text-align: left; border-collapse: separate; border-spacing: 0;
 }
 .history-table thead tr {
-  background: rgba(255, 234, 224, 0.5);
-  border-bottom: 1px solid rgba(224, 190, 196, 0.3);
+  background: #FDF3F0;
 }
 .history-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #FAF0ED;
+  box-shadow: 0 1px 0 rgba(224, 190, 196, 0.4);
   padding: 16px 24px; font-size: 12px; font-weight: 600;
   letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--color-on-surface-variant);

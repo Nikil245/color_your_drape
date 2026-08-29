@@ -8,10 +8,18 @@
   margin-bottom: var(--space-md); gap: 16px; flex-wrap: wrap;
 }
 .customers-actions {
-  display: flex; align-items: center; gap: var(--space-sm);
+  display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
 }
 .customer-search-wrap {
   position: relative; width: 256px;
+}
+.cust-month-summary {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: var(--space-md); padding: 10px 16px;
+  background: var(--color-surface-bright);
+  border: 1px solid var(--color-gold); border-radius: var(--radius-default);
+  color: var(--color-primary); font-weight: 600; font-size: 14px;
+  box-shadow: var(--shadow-ambient);
 }
 
 /* ─── Customer List ─── */
@@ -184,7 +192,24 @@
     box-shadow: var(--shadow-ambient);
   }
   .customer-search-wrap { width: 100%; }
-  .customers-actions { width: 100%; }
+  .customers-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+  .customer-search-wrap {
+    grid-column: 1 / -1;
+  }
+  .customers-actions .filter-select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .customers-actions .btn-secondary {
+    min-height: 44px;
+    justify-content: center;
+  }
 
   /* Detail drawer — full screen on mobile */
   .cust-detail-drawer {

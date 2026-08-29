@@ -20,7 +20,8 @@ export default function OrderHistory() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ status: '', payment: '', platform: '' });
+  const [filters, setFilters] = useState({ status: '', payment: '', platform: '', month: 'all' });
+  const [availableMonths, setAvailableMonths] = useState([]);
   const [editDrawer, setEditDrawer] = useState(null);
   const [editData, setEditData] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -35,8 +36,12 @@ export default function OrderHistory() {
       if (filters.status) params.status = filters.status;
       if (filters.payment) params.payment = filters.payment;
       if (filters.platform) params.platform = filters.platform;
+      if (filters.month && filters.month !== 'all') params.month = filters.month;
       const res = await ordersAPI.list(params);
       setOrders(res.data.orders);
+      if (res.data.availableMonths) {
+        setAvailableMonths(res.data.availableMonths);
+      }
     } catch { addToast('Failed to fetch orders', 'error'); }
     finally { setLoading(false); }
   };
@@ -109,6 +114,13 @@ export default function OrderHistory() {
             onChange={(e) => setFilters((p) => ({ ...p, platform: e.target.value }))}>
             <option value="">Platform</option><option>Instagram</option><option>WhatsApp</option>
           </select>
+          <select className="filter-select" value={filters.month || 'all'}
+            onChange={(e) => setFilters((p) => ({ ...p, month: e.target.value }))}>
+            <option value="all">All Time</option>
+            {availableMonths.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
           <button className="btn-secondary" onClick={fetchOrders} style={{ padding: '8px 20px' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>filter_list</span> Apply
           </button>
@@ -131,8 +143,7 @@ export default function OrderHistory() {
               <thead>
                 <tr>
                   <th>Order ID</th><th>Customer</th><th>Phone</th><th>Collection</th>
-                  <th>Qty</th><th>Total</th><th>Payment</th><th>Status</th>
-                  <th>Date</th><th>Delivery</th><th>Actions</th>
+                  <th>Qty</th><th style={{ textAlign: 'right' }}>Selling Price</th><th style={{ textAlign: 'right' }}>Cost Price</th><th style={{ textAlign: 'right' }}>Profit</th><th>Payment</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -143,11 +154,10 @@ export default function OrderHistory() {
                     <td>{o.phone}</td>
                     <td>{o.sareeBrand}{o.sareeColor ? ` - ${o.sareeColor}` : ''}</td>
                     <td style={{ textAlign: 'center' }}>{o.quantity}</td>
-                    <td style={{ fontWeight: 600 }}>{formatCurrency(o.totalAmount)}</td>
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(o.itemPrice)}</td>
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(o.costPrice)}</td>
+                    <td style={{ fontWeight: 600, textAlign: 'right' }}>{formatCurrency(o.profit ?? ((o.totalAmount || 0) - (o.costPrice || 0) * (o.quantity || 0)))}</td>
                     <td><span className={`badge ${payBadge(o.paymentStatus)}`}>{o.paymentStatus}</span></td>
-                    <td><span className={`badge ${statusBadge(o.itemStatus)}`}>{o.itemStatus}</span></td>
-                    <td className="date-cell">{o.orderPlacedDate}</td>
-                    <td className="date-cell">{o.expectedDeliveryDate || '—'}</td>
                     <td>
                       <div className="action-buttons">
                         <button className="action-btn" onClick={() => openEdit(o)} title="Edit">
@@ -171,7 +181,6 @@ export default function OrderHistory() {
             <div key={o.id} className="mobile-order-card glass-card" onClick={() => openEdit(o)}>
               <div className="mobile-card-header">
                 <span className="mobile-card-order-id">#{o.orderId}</span>
-                <span className={`badge ${statusBadge(o.itemStatus)}`}>{o.itemStatus}</span>
               </div>
               <div className="mobile-card-customer">{o.customerName}</div>
               <div className="mobile-card-phone">
@@ -188,8 +197,16 @@ export default function OrderHistory() {
                   <span className="mobile-card-detail-value">{o.quantity}</span>
                 </div>
                 <div className="mobile-card-detail">
-                  <span className="mobile-card-detail-label">Total</span>
-                  <span className="mobile-card-detail-value mobile-card-total">{formatCurrency(o.totalAmount)}</span>
+                  <span className="mobile-card-detail-label">Sell Price</span>
+                  <span className="mobile-card-detail-value">{formatCurrency(o.itemPrice)}</span>
+                </div>
+                <div className="mobile-card-detail">
+                  <span className="mobile-card-detail-label">Cost Price</span>
+                  <span className="mobile-card-detail-value">{formatCurrency(o.costPrice)}</span>
+                </div>
+                <div className="mobile-card-detail">
+                  <span className="mobile-card-detail-label">Profit</span>
+                  <span className="mobile-card-detail-value mobile-card-total">{formatCurrency(o.profit ?? ((o.totalAmount || 0) - (o.costPrice || 0) * (o.quantity || 0)))}</span>
                 </div>
                 <div className="mobile-card-detail">
                   <span className="mobile-card-detail-label">Payment</span>
@@ -197,16 +214,6 @@ export default function OrderHistory() {
                 </div>
               </div>
               <div className="mobile-card-footer">
-                <span className="mobile-card-date">
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span>
-                  {o.orderPlacedDate}
-                </span>
-                {o.expectedDeliveryDate && (
-                  <span className="mobile-card-date">
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>local_shipping</span>
-                    {o.expectedDeliveryDate}
-                  </span>
-                )}
                 <button className="mobile-card-edit-btn" onClick={(e) => { e.stopPropagation(); openEdit(o); }} title="Edit">
                   <span className="material-symbols-outlined">edit_note</span>
                 </button>

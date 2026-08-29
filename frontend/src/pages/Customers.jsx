@@ -55,19 +55,26 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [month, setMonth] = useState('all');
+  const [availableMonths, setAvailableMonths] = useState([]);
 
   // Detail drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [detail, setDetail] = useState(null); // { customer, orders }
 
-  useEffect(() => { fetchCustomers(); }, []);
+  useEffect(() => { fetchCustomers(); }, [month]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (targetMonth = month) => {
     setLoading(true);
     try {
-      const res = await customersAPI.list({ search });
+      const params = { search };
+      if (targetMonth && targetMonth !== 'all') params.month = targetMonth;
+      const res = await customersAPI.list(params);
       setCustomers(res.data.customers);
+      if (res.data.availableMonths) {
+        setAvailableMonths(res.data.availableMonths);
+      }
     } catch { /* silent */ }
     finally { setLoading(false); }
   };
@@ -91,6 +98,8 @@ export default function Customers() {
     setDetail(null);
   };
 
+  const selectedMonthLabel = availableMonths.find((m) => m.value === month)?.label || month;
+
   return (
     <div className="customers-page animate-fade-in">
       <div className="customers-header">
@@ -107,19 +116,33 @@ export default function Customers() {
               value={search} onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && fetchCustomers()} />
           </div>
-          <button className="btn-secondary" onClick={fetchCustomers}>
+          <select className="filter-select" value={month}
+            onChange={(e) => setMonth(e.target.value)}>
+            <option value="all">All Time</option>
+            {availableMonths.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          <button className="btn-secondary" onClick={() => fetchCustomers()}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>filter_list</span>
             Filter
           </button>
         </div>
       </div>
 
+      {month !== 'all' && !loading && (
+        <div className="cust-month-summary">
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>calendar_month</span>
+          <span>{customers.length} {customers.length === 1 ? 'customer' : 'customers'} ordered in {selectedMonthLabel}</span>
+        </div>
+      )}
+
       {loading ? (
         <div className="empty-state"><div className="spinner" /></div>
       ) : customers.length === 0 ? (
         <div className="empty-state">
           <span className="material-symbols-outlined">group</span>
-          <p>No customers yet. They'll appear here once you create orders.</p>
+          <p>No customers found for the selected period.</p>
         </div>
       ) : (
         <div className="customers-list glass-card">

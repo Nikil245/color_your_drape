@@ -232,22 +232,49 @@ router.post('/', validateOrder, async (req, res) => {
 
 /**
  * GET /api/orders — List all orders with optional filters
- * Query params: status, payment, platform, startDate, endDate, search
+ * Query params: status, payment, platform, startDate, endDate, search, month
  */
 router.get('/', async (req, res) => {
   try {
-    const { status, payment, platform, startDate, endDate, search } = req.query;
+    const { status, payment, platform, startDate, endDate, search, month } = req.query;
 
     let query = db.collection('orders').orderBy('createdAt', 'desc');
 
     const snapshot = await query.get();
     let orders = [];
+    const monthSet = new Set();
 
     snapshot.forEach((doc) => {
-      orders.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      orders.push({ id: doc.id, ...data });
+
+      const dateStr = data.orderPlacedDate || data.createdAt;
+      if (dateStr && typeof dateStr === 'string' && dateStr.length >= 7) {
+        const ym = dateStr.substring(0, 7);
+        if (/^\d{4}-\d{2}$/.test(ym)) {
+          monthSet.add(ym);
+        }
+      }
     });
 
-    // Apply filters
+    const availableMonths = Array.from(monthSet)
+      .sort((a, b) => b.localeCompare(a))
+      .map((ym) => {
+        const [yyyy, mm] = ym.split('-');
+        const date = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, 1);
+        const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return { value: ym, label };
+      });
+
+    // Apply month filter
+    if (month && month !== 'all') {
+      orders = orders.filter((o) => {
+        const d = o.orderPlacedDate || o.createdAt || '';
+        return typeof d === 'string' && d.startsWith(month);
+      });
+    }
+
+    // Apply existing filters
     if (status) {
       orders = orders.filter((o) => o.itemStatus === status);
     }
@@ -273,7 +300,7 @@ router.get('/', async (req, res) => {
       );
     }
 
-    return res.json({ orders, total: orders.length });
+    return res.json({ orders, total: orders.length, availableMonths });
   } catch (err) {
     console.error('List orders error:', err);
     return res.status(500).json({ error: 'Failed to fetch orders.' });
