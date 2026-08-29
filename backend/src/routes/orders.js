@@ -276,10 +276,18 @@ router.get('/', async (req, res) => {
 
     // Apply existing filters
     if (status) {
-      orders = orders.filter((o) => o.itemStatus === status);
+      if (status === 'PendingDelivery') {
+        orders = orders.filter((o) => o.itemStatus && !['Delivered', 'Returned'].includes(o.itemStatus));
+      } else {
+        orders = orders.filter((o) => o.itemStatus === status);
+      }
     }
     if (payment) {
-      orders = orders.filter((o) => o.paymentStatus === payment);
+      if (payment === 'Pending') {
+        orders = orders.filter((o) => o.paymentStatus === 'Pending' || o.paymentStatus === 'Partial');
+      } else {
+        orders = orders.filter((o) => o.paymentStatus === payment);
+      }
     }
     if (platform) {
       orders = orders.filter((o) => o.platform === platform);

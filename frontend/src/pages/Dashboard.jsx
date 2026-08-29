@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
@@ -16,7 +16,8 @@ const kpiConfig = [
   { key: 'totalProfit', label: 'Total Profit', icon: 'account_balance_wallet', prefix: '₹', borderColor: 'var(--color-secondary-container)' },
   { key: 'totalOrders', label: 'Total Orders', icon: 'shopping_bag', prefix: '', borderColor: 'var(--color-tertiary-container)' },
   { key: 'avgOrderValue', label: 'Avg Order Value', icon: 'receipt_long', prefix: '₹', borderColor: 'var(--color-outline)' },
-  { key: 'pendingDeliveries', label: 'Pending Deliveries', icon: 'local_shipping', prefix: '', borderColor: 'var(--color-error)' },
+  { key: 'pendingDeliveries', label: 'Pending Deliveries', icon: 'local_shipping', prefix: '', borderColor: 'var(--color-error)', clickable: true, linkTo: '/orders?tab=history&status=PendingDelivery' },
+  { key: 'paymentPending', label: 'Payment Pending', icon: 'pending_actions', prefix: '', borderColor: '#D9782D', clickable: true, linkTo: '/orders?tab=history&payment=Pending' },
   { key: 'lowStockItems', label: 'Low Stock Items', icon: 'inventory_2', prefix: '', borderColor: 'var(--color-gold)' },
 ];
 
@@ -36,6 +37,7 @@ export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('this_month');
   const [periodLoading, setPeriodLoading] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const fetchDashboard = (period, isInitial = false) => {
     if (isInitial) {
@@ -218,21 +220,36 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className={`kpi-grid ${periodLoading ? 'period-refetching' : ''}`}>
-        {kpiConfig.map((kpi) => (
-          <div key={kpi.key} className="kpi-card glass-card" style={{ borderTopColor: kpi.borderColor }}>
-            <div className="kpi-card-top">
-              <p className="text-label-md" style={{ color: 'var(--color-on-surface-variant)' }}>{kpi.label}</p>
-              <div className="kpi-icon-wrap">
-                <span className="material-symbols-outlined" style={{ fontSize: 20, color: kpi.borderColor }}>
-                  {kpi.icon}
-                </span>
+        {kpiConfig.map((kpi) => {
+          const isClickable = Boolean(kpi.clickable && kpi.linkTo);
+          return (
+            <div
+              key={kpi.key}
+              className={`kpi-card glass-card ${isClickable ? 'kpi-card-clickable' : ''}`}
+              style={{ borderTopColor: kpi.borderColor }}
+              onClick={() => isClickable && navigate(kpi.linkTo)}
+            >
+              <div className="kpi-card-top">
+                <div className="kpi-title-wrap">
+                  <p className="text-label-md" style={{ color: 'var(--color-on-surface-variant)' }}>{kpi.label}</p>
+                  {isClickable && (
+                    <span className="material-symbols-outlined kpi-arrow-icon" title="View details">
+                      arrow_forward
+                    </span>
+                  )}
+                </div>
+                <div className="kpi-icon-wrap">
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: kpi.borderColor }}>
+                    {kpi.icon}
+                  </span>
+                </div>
               </div>
+              <h2 className="text-headline-sm" style={{ color: 'var(--color-on-background)' }}>
+                {kpi.prefix ? formatCurrency(kpis[kpi.key]) : kpis[kpi.key]}
+              </h2>
             </div>
-            <h2 className="text-headline-sm" style={{ color: 'var(--color-on-background)' }}>
-              {kpi.prefix ? formatCurrency(kpis[kpi.key]) : kpis[kpi.key]}
-            </h2>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Charts Grid */}

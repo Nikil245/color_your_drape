@@ -8,8 +8,14 @@ import './Orders.css';
 
 export default function Orders() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') === 'history' ? 'history' : 'new';
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const isHistory = searchParams.get('tab') === 'history' || searchParams.has('payment') || searchParams.has('status');
+  const [activeTab, setActiveTab] = useState(isHistory ? 'history' : 'new');
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'history' || searchParams.has('payment') || searchParams.has('status')) {
+      setActiveTab('history');
+    }
+  }, [searchParams]);
 
   return (
     <div className="orders-page animate-fade-in">

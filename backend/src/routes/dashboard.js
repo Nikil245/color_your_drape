@@ -140,6 +140,11 @@ router.get('/summary', async (req, res) => {
       (o) => o.itemStatus && !['Delivered', 'Returned'].includes(o.itemStatus)
     ).length;
 
+    // Payment Pending KPI (Scoped to filtered period)
+    const paymentPending = filteredOrders.filter(
+      (o) => o.paymentStatus === 'Pending' || o.paymentStatus === 'Partial'
+    ).length;
+
     const invSnapshot = await db.collection('inventory').get();
     let lowStockItems = 0;
     invSnapshot.forEach((doc) => {
@@ -289,7 +294,7 @@ router.get('/summary', async (req, res) => {
     return res.json({
       selectedPeriod: periodParam,
       availableMonths,
-      kpis: { totalSales, totalProfit, totalOrders, avgOrderValue, pendingDeliveries, lowStockItems },
+      kpis: { totalSales, totalProfit, totalOrders, avgOrderValue, pendingDeliveries, paymentPending, lowStockItems },
       charts: { salesTrend, ordersByPlatform, topBrands, ordersByCity },
       recentOrders,
     });

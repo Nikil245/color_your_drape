@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ordersAPI } from '../services/api';
 import { useToast } from '../components/Toast';
 
@@ -17,26 +18,43 @@ const payBadge = (s) => {
 };
 
 export default function OrderHistory() {
+  const [searchParams] = useSearchParams();
+  const initialPayment = searchParams.get('payment') || '';
+  const initialStatus = searchParams.get('status') || '';
+  const initialMonth = searchParams.get('month') || 'all';
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ status: '', payment: '', platform: '', month: 'all' });
+  const [filters, setFilters] = useState({
+    status: initialStatus,
+    payment: initialPayment,
+    platform: '',
+    month: initialMonth,
+  });
   const [availableMonths, setAvailableMonths] = useState([]);
   const [editDrawer, setEditDrawer] = useState(null);
   const [editData, setEditData] = useState(null);
   const [saving, setSaving] = useState(false);
   const { addToast } = useToast();
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    const s = searchParams.get('status') || '';
+    const p = searchParams.get('payment') || '';
+    const m = searchParams.get('month') || 'all';
+    const updated = { status: s, payment: p, platform: '', month: m };
+    setFilters(updated);
+    fetchOrders(updated);
+  }, [searchParams]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (activeFilters = filters) => {
     setLoading(true);
     try {
       const params = { search };
-      if (filters.status) params.status = filters.status;
-      if (filters.payment) params.payment = filters.payment;
-      if (filters.platform) params.platform = filters.platform;
-      if (filters.month && filters.month !== 'all') params.month = filters.month;
+      if (activeFilters.status) params.status = activeFilters.status;
+      if (activeFilters.payment) params.payment = activeFilters.payment;
+      if (activeFilters.platform) params.platform = activeFilters.platform;
+      if (activeFilters.month && activeFilters.month !== 'all') params.month = activeFilters.month;
       const res = await ordersAPI.list(params);
       setOrders(res.data.orders);
       if (res.data.availableMonths) {
@@ -103,6 +121,7 @@ export default function OrderHistory() {
           <select className="filter-select" value={filters.status}
             onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}>
             <option value="">Order Status</option>
+            <option value="PendingDelivery">Pending Delivery (Not Delivered)</option>
             <option>Confirmed</option><option>Packed</option><option>Shipped</option>
             <option>Delivered</option><option>Returned</option>
           </select>
