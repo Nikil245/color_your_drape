@@ -1,6 +1,11 @@
 const express = require('express');
 const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
+const {
+  normalizeOrderForResponse,
+  getPaidItemTotals,
+  quantity,
+} = require('../utils/orderItems');
 
 const router = express.Router();
 
@@ -87,7 +92,7 @@ router.get('/summary', async (req, res) => {
 
     const snapshot = await db.collection('orders').get();
     const allOrders = [];
-    snapshot.forEach((doc) => allOrders.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach((doc) => allOrders.push(normalizeOrderForResponse({ id: doc.id, ...doc.data() })));
 
     const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -124,11 +129,17 @@ router.get('/summary', async (req, res) => {
     });
 
     // ─── KPIs ───
-    // Filter paid orders specifically for Sales and Profit calculations
-    const paidOrders = filteredOrders.filter((o) => o.paymentStatus === 'Paid');
+    // Sales and profit count only line items that are fully paid.
+    const paidTotals = filteredOrders.reduce((acc, o) => {
+      const itemTotals = getPaidItemTotals(o.items || []);
+      return {
+        totalAmount: acc.totalAmount + itemTotals.totalAmount,
+        profit: acc.profit + itemTotals.profit,
+      };
+    }, { totalAmount: 0, profit: 0 });
 
-    const totalSales = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-    const totalProfit = paidOrders.reduce((sum, o) => sum + (o.profit || 0), 0);
+    const totalSales = paidTotals.totalAmount;
+    const totalProfit = paidTotals.profit;
 
     // KPIs reflecting ALL orders regardless of payment status
     const totalOrders = filteredOrders.length;
@@ -171,12 +182,11 @@ router.get('/summary', async (req, res) => {
       }
 
       filteredOrders.forEach((o) => {
-        if (o.paymentStatus === 'Paid') {
-          const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
-          if (dateStr && aggregated[dateStr]) {
-            aggregated[dateStr].sales += (o.totalAmount || 0);
-            aggregated[dateStr].profit += (o.profit || 0);
-          }
+        const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
+        if (dateStr && aggregated[dateStr]) {
+          const itemTotals = getPaidItemTotals(o.items || []);
+          aggregated[dateStr].sales += itemTotals.totalAmount;
+          aggregated[dateStr].profit += itemTotals.profit;
         }
       });
     } else {
@@ -221,14 +231,13 @@ router.get('/summary', async (req, res) => {
       }
 
       filteredOrders.forEach((o) => {
-        if (o.paymentStatus === 'Paid') {
-          const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
-          if (dateStr) {
-            const yyyyMm = dateStr.substring(0, 7);
-            if (aggregated[yyyyMm]) {
-              aggregated[yyyyMm].sales += (o.totalAmount || 0);
-              aggregated[yyyyMm].profit += (o.profit || 0);
-            }
+        const dateStr = o.orderPlacedDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
+        if (dateStr) {
+          const yyyyMm = dateStr.substring(0, 7);
+          if (aggregated[yyyyMm]) {
+            const itemTotals = getPaidItemTotals(o.items || []);
+            aggregated[yyyyMm].sales += itemTotals.totalAmount;
+            aggregated[yyyyMm].profit += itemTotals.profit;
           }
         }
       });
@@ -250,8 +259,10 @@ router.get('/summary', async (req, res) => {
     // ─── Chart Data: Top Selling Brands (Period filtered) ───
     const brandCounts = {};
     filteredOrders.forEach((o) => {
-      const b = o.sareeBrand || 'Unknown';
-      brandCounts[b] = (brandCounts[b] || 0) + (o.quantity || 1);
+      (o.items || []).forEach((item) => {
+        const b = item.sareeBrand || 'Unknown';
+        brandCounts[b] = (brandCounts[b] || 0) + (quantity(item.quantity) || 1);
+      });
     });
     const sortedBrands = Object.entries(brandCounts)
       .sort(([, a], [, b]) => b - a)
@@ -287,8 +298,10 @@ router.get('/summary', async (req, res) => {
         customerName: o.customerName,
         sareeBrand: o.sareeBrand,
         quantity: o.quantity,
+        itemSummary: o.itemSummary,
         totalAmount: o.totalAmount,
         itemStatus: o.itemStatus,
+        paymentStatus: o.paymentStatus,
       }));
 
     return res.json({

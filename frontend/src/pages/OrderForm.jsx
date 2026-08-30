@@ -2,19 +2,78 @@ import { useState, useEffect, useMemo } from 'react';
 import { ordersAPI, inventoryAPI } from '../services/api';
 import { useToast } from '../components/Toast';
 
-const emptyOrder = {
-  customerName: '', phone: '', address: '', platform: 'Instagram',
-  customerStatus: 'New', sareeBrand: '', materialType: '', sareeColor: '',
+const createEmptyItem = () => ({
+  lineItemId: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  sareeBrand: '',
+  materialType: '',
+  sareeColor: '',
   inventoryItemId: '',
-  orderPlacedDate: new Date().toISOString().split('T')[0], quantity: 1,
-  itemPrice: '', costPrice: '', discount: 0, paymentStatus: 'Pending',
-  paymentMode: 'UPI', itemStatus: 'Confirmed', inventoryStatus: 'Reserved',
-  expectedDeliveryDate: '', orderDeliveredDate: '', notes: '',
-};
+  quantity: 1,
+  itemPrice: '',
+  costPrice: '',
+  discount: 0,
+  paymentStatus: 'Pending',
+});
+
+const createEmptyOrder = () => ({
+  customerName: '',
+  phone: '',
+  address: '',
+  platform: 'Instagram',
+  customerStatus: 'New',
+  orderPlacedDate: new Date().toISOString().split('T')[0],
+  paymentMode: 'UPI',
+  itemStatus: 'Confirmed',
+  inventoryStatus: 'Reserved',
+  expectedDeliveryDate: '',
+  orderDeliveredDate: '',
+  notes: '',
+  items: [createEmptyItem()],
+});
+
+function normalizeDraft(savedData) {
+  const base = createEmptyOrder();
+  if (!savedData || typeof savedData !== 'object') return base;
+
+  const items = Array.isArray(savedData.items) && savedData.items.length > 0
+    ? savedData.items
+    : [{
+      lineItemId: savedData.lineItemId,
+      sareeBrand: savedData.sareeBrand,
+      materialType: savedData.materialType,
+      sareeColor: savedData.sareeColor,
+      inventoryItemId: savedData.inventoryItemId,
+      quantity: savedData.quantity,
+      itemPrice: savedData.itemPrice,
+      costPrice: savedData.costPrice,
+      discount: savedData.discount,
+      paymentStatus: savedData.paymentStatus,
+    }];
+
+  return {
+    ...base,
+    ...savedData,
+    items: items.map((item) => ({
+      ...createEmptyItem(),
+      ...item,
+      lineItemId: item.lineItemId || createEmptyItem().lineItemId,
+      quantity: item.quantity || 1,
+      discount: item.discount || 0,
+      paymentStatus: item.paymentStatus || savedData.paymentStatus || 'Pending',
+    })),
+  };
+}
 
 function formatCurrency(num) {
   if (!num && num !== 0) return '₹0';
   return '₹' + Number(num).toLocaleString('en-IN');
+}
+
+function calcItemTotal(item) {
+  const q = Number(item.quantity) || 0;
+  const p = Number(item.itemPrice) || 0;
+  const d = Number(item.discount) || 0;
+  return p * q - d;
 }
 
 export default function OrderForm() {
@@ -22,12 +81,12 @@ export default function OrderForm() {
     const saved = localStorage.getItem('orderFormDraft');
     if (saved) {
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return { ...emptyOrder };
+        return normalizeDraft(JSON.parse(saved));
+      } catch {
+        return createEmptyOrder();
       }
     }
-    return { ...emptyOrder };
+    return createEmptyOrder();
   });
   const [saving, setSaving] = useState(false);
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -37,7 +96,6 @@ export default function OrderForm() {
     localStorage.setItem('orderFormDraft', JSON.stringify(formData));
   }, [formData]);
 
-  // Fetch all inventory items on mount
   useEffect(() => {
     const fetchInventory = async () => {
       try {
@@ -48,9 +106,6 @@ export default function OrderForm() {
     fetchInventory();
   }, []);
 
-  // ─── Derived dropdown options ───
-
-  // Available items (only variants with remaining stock > 0, flattened)
   const availableItems = useMemo(() => {
     const flattened = [];
     inventoryItems.forEach((i) => {
@@ -94,28 +149,24 @@ export default function OrderForm() {
     return flattened;
   }, [inventoryItems]);
 
-  // Unique brands from available items, sorted — trim to avoid whitespace duplicates
   const brandOptions = useMemo(() =>
     [...new Set(availableItems.map((i) => (i.brandName || '').trim()).filter(Boolean))].sort(),
     [availableItems]
   );
 
-  // Material types for the selected brand (only from available items)
-  // If old records have no materialType, show them under "Unspecified"
-  const materialTypeOptions = useMemo(() => {
-    if (!formData.sareeBrand) return [];
-    const selectedBrandNorm = formData.sareeBrand.trim().toLowerCase();
+  const getMaterialTypeOptions = (item) => {
+    if (!item.sareeBrand) return [];
+    const selectedBrandNorm = item.sareeBrand.trim().toLowerCase();
     const types = availableItems
       .filter((i) => (i.brandName || '').trim().toLowerCase() === selectedBrandNorm)
       .map((i) => (i.materialType || '').trim() || 'Unspecified');
     return [...new Set(types)].sort();
-  }, [availableItems, formData.sareeBrand]);
+  };
 
-  // Saree colors for the selected brand + materialType (with variant stock info)
-  const colorOptions = useMemo(() => {
-    if (!formData.sareeBrand || !formData.materialType) return [];
-    const selectedBrandNorm = formData.sareeBrand.trim().toLowerCase();
-    const selectedMaterial = formData.materialType.trim();
+  const getColorOptions = (item) => {
+    if (!item.sareeBrand || !item.materialType) return [];
+    const selectedBrandNorm = item.sareeBrand.trim().toLowerCase();
+    const selectedMaterial = item.materialType.trim();
     const selectedMaterialNorm = selectedMaterial.toLowerCase();
 
     return availableItems
@@ -123,7 +174,6 @@ export default function OrderForm() {
         const itemBrandNorm = (i.brandName || '').trim().toLowerCase();
         const itemMaterial = (i.materialType || '').trim();
         const itemMaterialNorm = itemMaterial.toLowerCase();
-
         const brandMatches = itemBrandNorm === selectedBrandNorm;
         const materialMatches =
           selectedMaterialNorm === 'unspecified'
@@ -141,66 +191,78 @@ export default function OrderForm() {
         purchasePrice: i.purchasePrice,
       }))
       .filter((c) => c.remaining > 0);
-  }, [availableItems, formData.sareeBrand, formData.materialType]);
+  };
+
+  const getSelectedStock = (item) => {
+    const colorNorm = (item.sareeColor || '').trim().toLowerCase();
+    const match = getColorOptions(item).find((c) => (c.color || '').trim().toLowerCase() === colorNorm);
+    return match ? match.remaining : null;
+  };
 
   const handleChange = (field, value) => {
+    setFormData((p) => ({ ...p, [field]: value }));
+  };
+
+  const handleItemChange = (index, field, value) => {
     setFormData((p) => {
-      const next = { ...p, [field]: value };
+      const items = p.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
 
-      // Cascade reset: when brand changes, clear material type + color +
-      // inventory link + prices so stale values from the previous selection
-      // can never carry over to the new one.
-      if (field === 'sareeBrand') {
-        next.materialType = '';
-        next.sareeColor = '';
-        next.inventoryItemId = '';
-        next.itemPrice = '';
-        next.costPrice = '';
-      }
+        const next = { ...item, [field]: value };
 
-      // When material type changes, clear color + inventory link + prices
-      // for the same reason — the variant set is entirely different now.
-      if (field === 'materialType') {
-        next.sareeColor = '';
-        next.inventoryItemId = '';
-        next.itemPrice = '';
-        next.costPrice = '';
-      }
-
-      // When color changes, auto-link to the exact matched variant and
-      // ALWAYS overwrite prices — no "only if empty" guard, so switching
-      // from one colour to another always reflects the new variant's pricing.
-      if (field === 'sareeColor') {
-        const valNorm = (value || '').trim().toLowerCase();
-        const match = colorOptions.find((c) => (c.color || '').trim().toLowerCase() === valNorm);
-        if (match) {
-          next.inventoryItemId = match.id;
-          next.itemPrice = match.sellingPrice ?? '';
-          next.costPrice = match.purchasePrice ?? '';
-        } else {
+        if (field === 'sareeBrand') {
+          next.materialType = '';
+          next.sareeColor = '';
           next.inventoryItemId = '';
           next.itemPrice = '';
           next.costPrice = '';
         }
-      }
 
-      return next;
+        if (field === 'materialType') {
+          next.sareeColor = '';
+          next.inventoryItemId = '';
+          next.itemPrice = '';
+          next.costPrice = '';
+        }
+
+        if (field === 'sareeColor') {
+          const valNorm = (value || '').trim().toLowerCase();
+          const match = getColorOptions(next).find((c) => (c.color || '').trim().toLowerCase() === valNorm);
+          if (match) {
+            next.inventoryItemId = match.id;
+            next.itemPrice = match.sellingPrice ?? '';
+            next.costPrice = match.purchasePrice ?? '';
+          } else {
+            next.inventoryItemId = '';
+            next.itemPrice = '';
+            next.costPrice = '';
+          }
+        }
+
+        return next;
+      });
+
+      return { ...p, items };
     });
   };
 
-  const calcTotal = () => {
-    const q = Number(formData.quantity) || 0;
-    const p = Number(formData.itemPrice) || 0;
-    const d = Number(formData.discount) || 0;
-    return p * q - d;
+  const addItem = () => {
+    setFormData((p) => ({ ...p, items: [...p.items, createEmptyItem()] }));
   };
 
-  // Find the selected inventory item's remaining stock for display
-  const selectedStock = useMemo(() => {
-    const colorNorm = (formData.sareeColor || '').trim().toLowerCase();
-    const match = colorOptions.find((c) => (c.color || '').trim().toLowerCase() === colorNorm);
-    return match ? match.remaining : null;
-  }, [colorOptions, formData.sareeColor]);
+  const removeItem = (index) => {
+    setFormData((p) => {
+      if (p.items.length <= 1) return p;
+      return { ...p, items: p.items.filter((_, itemIndex) => itemIndex !== index) };
+    });
+  };
+
+  const calcOrderTotal = () => formData.items.reduce((sum, item) => sum + calcItemTotal(item), 0);
+
+  const resetForm = () => {
+    setFormData(createEmptyOrder());
+    localStorage.removeItem('orderFormDraft');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -208,9 +270,8 @@ export default function OrderForm() {
     try {
       await ordersAPI.create(formData);
       addToast('Order created successfully!', 'success');
-      setFormData({ ...emptyOrder });
+      setFormData(createEmptyOrder());
       localStorage.removeItem('orderFormDraft');
-      // Refresh inventory data (stock levels changed)
       const res = await inventoryAPI.list();
       setInventoryItems(res.data.items || []);
     } catch (err) {
@@ -254,100 +315,130 @@ export default function OrderForm() {
           </div>
         </div>
 
-        <h3 className="section-title" style={{ color: 'var(--color-primary)', marginTop: 48 }}>Item Details</h3>
-        <div className="form-grid">
-          {/* Saree Brand — Dropdown from inventory */}
-          <div className="form-field">
-            <label className="form-label">Saree Brand</label>
-            <select className="form-select" value={formData.sareeBrand}
-              onChange={(e) => handleChange('sareeBrand', e.target.value)} required>
-              <option value="">— Select Brand —</option>
-              {brandOptions.map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
+        <div className="item-section-heading">
+          <h3 className="section-title" style={{ color: 'var(--color-primary)', marginTop: 48 }}>Item Details</h3>
+          <button type="button" className="btn-secondary add-saree-btn" onClick={addItem}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+            Add Another Saree
+          </button>
+        </div>
 
-          {/* Material Type — Dependent dropdown */}
-          <div className="form-field">
-            <label className="form-label">Material Type</label>
-            <select className="form-select" value={formData.materialType}
-              onChange={(e) => handleChange('materialType', e.target.value)}
-              disabled={!formData.sareeBrand} required>
-              {!formData.sareeBrand ? (
-                <option value="">Select a brand first</option>
-              ) : (
-                <>
-                  <option value="">— Select Material —</option>
-                  {materialTypeOptions.map((mt) => <option key={mt} value={mt}>{mt}</option>)}
-                </>
-              )}
-            </select>
-          </div>
+        <div className="order-items-list">
+          {formData.items.map((item, index) => {
+            const materialTypeOptions = getMaterialTypeOptions(item);
+            const colorOptions = getColorOptions(item);
+            const selectedStock = getSelectedStock(item);
 
-          {/* Saree Color — Dependent dropdown with stock info */}
-          <div className="form-field">
-            <label className="form-label">Saree Color</label>
-            <select className="form-select" value={formData.sareeColor}
-              onChange={(e) => handleChange('sareeColor', e.target.value)}
-              disabled={!formData.materialType} required>
-              {!formData.materialType ? (
-                <option value="">Select material type first</option>
-              ) : (
-                <>
-                  <option value="">— Select Color —</option>
-                  {colorOptions.map((c, idx) => (
-                    <option key={`${c.id}-${c.color}-${idx}`} value={c.color}>
-                      {c.color} ({c.remaining} left)
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-            {selectedStock !== null && (
-              <span className="form-hint" style={{
-                marginTop: 4, fontSize: 12,
-                color: selectedStock <= 5 ? 'var(--color-error)' : 'var(--color-tertiary)',
-                fontWeight: 600
-              }}>
-                {selectedStock} in stock
-              </span>
-            )}
-          </div>
+            return (
+              <section className="order-item-block" key={item.lineItemId}>
+                <div className="order-item-header">
+                  <h4>Saree {index + 1}</h4>
+                  {formData.items.length > 1 && (
+                    <button type="button" className="order-item-remove" onClick={() => removeItem(index)} title="Remove saree">
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  )}
+                </div>
 
+                <div className="form-grid item-form-grid">
+                  <div className="form-field">
+                    <label className="form-label">Saree Brand</label>
+                    <select className="form-select" value={item.sareeBrand}
+                      onChange={(e) => handleItemChange(index, 'sareeBrand', e.target.value)} required>
+                      <option value="">Select Brand</option>
+                      {brandOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label className="form-label">Material Type</label>
+                    <select className="form-select" value={item.materialType}
+                      onChange={(e) => handleItemChange(index, 'materialType', e.target.value)}
+                      disabled={!item.sareeBrand} required>
+                      {!item.sareeBrand ? (
+                        <option value="">Select a brand first</option>
+                      ) : (
+                        <>
+                          <option value="">Select Material</option>
+                          {materialTypeOptions.map((mt) => <option key={mt} value={mt}>{mt}</option>)}
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label className="form-label">Saree Color</label>
+                    <select className="form-select" value={item.sareeColor}
+                      onChange={(e) => handleItemChange(index, 'sareeColor', e.target.value)}
+                      disabled={!item.materialType} required>
+                      {!item.materialType ? (
+                        <option value="">Select material type first</option>
+                      ) : (
+                        <>
+                          <option value="">Select Color</option>
+                          {colorOptions.map((c, idx) => (
+                            <option key={`${c.id}-${c.color}-${idx}`} value={c.color}>
+                              {c.color} ({c.remaining} left)
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                    <span className="form-hint stock-hint">
+                      {selectedStock !== null && (
+                        <span className={selectedStock <= 5 ? 'stock-hint-low' : 'stock-hint-ok'}>
+                          {selectedStock} in stock
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="form-field">
+                    <label className="form-label">Quantity</label>
+                    <input type="number" min="1" className="form-input" value={item.quantity}
+                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} required />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Unit Price (₹)</label>
+                    <input type="number" min="0" className="form-input" placeholder="₹" value={item.itemPrice}
+                      onChange={(e) => handleItemChange(index, 'itemPrice', e.target.value)} required />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Cost Price (₹)</label>
+                    <input type="number" min="0" className="form-input" placeholder="₹" value={item.costPrice}
+                      onChange={(e) => handleItemChange(index, 'costPrice', e.target.value)} required />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Discount Amount (₹)</label>
+                    <input type="number" min="0" className="form-input" placeholder="₹" value={item.discount}
+                      onChange={(e) => handleItemChange(index, 'discount', e.target.value)} />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Payment Status</label>
+                    <select className="form-select" value={item.paymentStatus}
+                      onChange={(e) => handleItemChange(index, 'paymentStatus', e.target.value)}>
+                      <option>Pending</option><option>Partial</option><option>Paid</option>
+                    </select>
+                  </div>
+                  <div className="line-total-pill">
+                    <span>Line Total</span>
+                    <strong>{formatCurrency(calcItemTotal(item))}</strong>
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <div className="form-grid order-shared-grid">
+          <div className="span-2 total-amount-block">
+            <span className="text-headline-sm">Total Amount</span>
+            <span className="text-display-lg" style={{ color: 'var(--color-secondary)' }}>{formatCurrency(calcOrderTotal())}</span>
+          </div>
           <div className="form-field">
             <label className="form-label">Order Date</label>
             <input type="date" className="form-input" value={formData.orderPlacedDate}
               onChange={(e) => handleChange('orderPlacedDate', e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label className="form-label">Quantity</label>
-            <input type="number" min="1" className="form-input" value={formData.quantity}
-              onChange={(e) => handleChange('quantity', e.target.value)} required />
-          </div>
-          <div className="form-field">
-            <label className="form-label">Unit Price (₹)</label>
-            <input type="number" min="0" className="form-input" placeholder="₹" value={formData.itemPrice}
-              onChange={(e) => handleChange('itemPrice', e.target.value)} required />
-          </div>
-          <div className="form-field">
-            <label className="form-label">Cost Price (₹)</label>
-            <input type="number" min="0" className="form-input" placeholder="₹" value={formData.costPrice}
-              onChange={(e) => handleChange('costPrice', e.target.value)} required />
-          </div>
-          <div className="form-field">
-            <label className="form-label">Discount Amount (₹)</label>
-            <input type="number" min="0" className="form-input" placeholder="₹" value={formData.discount}
-              onChange={(e) => handleChange('discount', e.target.value)} />
-          </div>
-          <div className="span-2 total-amount-block">
-            <span className="text-headline-sm">Total Amount</span>
-            <span className="text-display-lg" style={{ color: 'var(--color-secondary)' }}>{formatCurrency(calcTotal())}</span>
-          </div>
-          <div className="form-field">
-            <label className="form-label">Payment Status</label>
-            <select className="form-select" value={formData.paymentStatus}
-              onChange={(e) => handleChange('paymentStatus', e.target.value)}>
-              <option>Pending</option><option>Partial</option><option>Paid</option>
-            </select>
           </div>
           <div className="form-field">
             <label className="form-label">Payment Mode</label>
@@ -375,11 +466,9 @@ export default function OrderForm() {
               value={formData.notes} onChange={(e) => handleChange('notes', e.target.value)} />
           </div>
         </div>
+
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => {
-            setFormData({ ...emptyOrder });
-            localStorage.removeItem('orderFormDraft');
-          }}>Reset Form</button>
+          <button type="button" className="btn-secondary" onClick={resetForm}>Reset Form</button>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Saving...' : 'Save Order'}
           </button>

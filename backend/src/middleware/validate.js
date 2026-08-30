@@ -11,6 +11,9 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
+const hasItemsArray = (_value, { req }) => Array.isArray(req.body.items);
+const hasNoItemsArray = (_value, { req }) => !Array.isArray(req.body.items);
+
 /**
  * Sanitize and validate order creation/update fields.
  */
@@ -20,16 +23,33 @@ const validateOrder = [
   body('address').trim().notEmpty().withMessage('Address is required').escape(),
   body('platform').trim().isIn(['Instagram', 'WhatsApp']).withMessage('Platform must be Instagram or WhatsApp'),
   body('customerStatus').optional().trim().isIn(['New', 'Repeat', 'VIP']).withMessage('Invalid customer status'),
-  body('sareeBrand').trim().notEmpty().withMessage('Saree brand is required').escape(),
-  body('materialType').trim().notEmpty().withMessage('Material type is required').escape(),
-  body('sareeColor').trim().notEmpty().withMessage('Saree color is required').escape(),
-  body('inventoryItemId').optional({ checkFalsy: true }).trim().escape(),
+  body('items').custom((items, { req }) => {
+    if (Array.isArray(items) && items.length > 0) return true;
+    if (items !== undefined) throw new Error('At least one saree item is required');
+    if (req.body.sareeBrand && req.body.materialType && req.body.sareeColor) return true;
+    throw new Error('At least one saree item is required');
+  }),
+  body('items.*.lineItemId').if(hasItemsArray).optional({ checkFalsy: true }).trim().escape(),
+  body('items.*.sareeBrand').if(hasItemsArray).trim().notEmpty().withMessage('Saree brand is required').escape(),
+  body('items.*.materialType').if(hasItemsArray).trim().notEmpty().withMessage('Material type is required').escape(),
+  body('items.*.sareeColor').if(hasItemsArray).trim().notEmpty().withMessage('Saree color is required').escape(),
+  body('items.*.inventoryItemId').if(hasItemsArray).optional({ checkFalsy: true }).trim().escape(),
+  body('items.*.quantity').if(hasItemsArray).isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+  body('items.*.itemPrice').if(hasItemsArray).isFloat({ min: 0 }).withMessage('Item price must be a positive number'),
+  body('items.*.costPrice').if(hasItemsArray).isFloat({ min: 0 }).withMessage('Cost price must be a positive number'),
+  body('items.*.discount').if(hasItemsArray).optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Discount must be non-negative'),
+  body('items.*.paymentStatus').if(hasItemsArray).optional({ checkFalsy: true }).trim().isIn(['Paid', 'Pending', 'Partial']).withMessage('Invalid payment status'),
+  body('sareeBrand').if(hasNoItemsArray).trim().notEmpty().withMessage('Saree brand is required').escape(),
+  body('materialType').if(hasNoItemsArray).trim().notEmpty().withMessage('Material type is required').escape(),
+  body('sareeColor').if(hasNoItemsArray).trim().notEmpty().withMessage('Saree color is required').escape(),
+  body('inventoryItemId').if(hasNoItemsArray).optional({ checkFalsy: true }).trim().escape(),
   body('orderPlacedDate').optional({ checkFalsy: true }).isISO8601().withMessage('Invalid order date'),
-  body('quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
-  body('itemPrice').isFloat({ min: 0 }).withMessage('Item price must be a positive number'),
-  body('costPrice').isFloat({ min: 0 }).withMessage('Cost price must be a positive number'),
-  body('discount').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Discount must be non-negative'),
-  body('paymentStatus').trim().isIn(['Paid', 'Pending', 'Partial']).withMessage('Invalid payment status'),
+  body('quantity').if(hasNoItemsArray).isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+  body('itemPrice').if(hasNoItemsArray).isFloat({ min: 0 }).withMessage('Item price must be a positive number'),
+  body('costPrice').if(hasNoItemsArray).isFloat({ min: 0 }).withMessage('Cost price must be a positive number'),
+  body('discount').if(hasNoItemsArray).optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Discount must be non-negative'),
+  body('paymentStatus').if(hasNoItemsArray).trim().isIn(['Paid', 'Pending', 'Partial']).withMessage('Invalid payment status'),
+  body('paymentStatus').if(hasItemsArray).optional({ checkFalsy: true }).trim().isIn(['Paid', 'Pending', 'Partial']).withMessage('Invalid payment status'),
   body('paymentMode').trim().isIn(['UPI', 'Bank Transfer', 'COD']).withMessage('Invalid payment mode'),
   body('itemStatus').trim().isIn(['Confirmed', 'Packed', 'Shipped', 'Delivered', 'Returned']).withMessage('Invalid item status'),
   body('inventoryStatus').optional().trim().isIn(['In Stock', 'Reserved', 'Sold']).withMessage('Invalid inventory status'),

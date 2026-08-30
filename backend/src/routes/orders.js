@@ -2,6 +2,14 @@ const express = require('express');
 const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
 const { validateOrder } = require('../middleware/validate');
+const {
+  quantity,
+  normalizeOrderItems,
+  normalizeOrderForResponse,
+  buildSubmittedItems,
+  buildOrderData,
+  getLinkedInventoryIds,
+} = require('../utils/orderItems');
 
 const router = express.Router();
 
@@ -99,6 +107,32 @@ function updateVariantStock(invData, targetColor, targetMaterial, qtyDelta, acti
   };
 }
 
+function applyInventoryMovement(inventoryStates, item, action, options = {}) {
+  const invId = item.inventoryItemId || '';
+  const qty = quantity(item.quantity);
+  if (!invId || qty <= 0) return;
+
+  const current = inventoryStates.get(invId);
+  if (!current || !current.exists) {
+    if (options.requireExisting) throw new Error('Linked inventory item not found.');
+    return;
+  }
+
+  const result = updateVariantStock(current.data, item.sareeColor, item.materialType, qty, action);
+  inventoryStates.set(invId, {
+    ...current,
+    changed: true,
+    data: {
+      ...current.data,
+      variants: result.updatedVariants,
+      totalQuantity: result.totalQuantity,
+      quantitySold: result.quantitySold,
+      quantityRemaining: result.quantityRemaining,
+      status: result.status,
+    },
+  });
+}
+
 /**
  * POST /api/orders — Create a new order
  *
@@ -110,71 +144,23 @@ function updateVariantStock(invData, targetColor, targetMaterial, qtyDelta, acti
  */
 router.post('/', validateOrder, async (req, res) => {
   try {
-    const {
-      customerName, phone, address, platform, customerStatus,
-      sareeBrand, materialType, sareeColor, inventoryItemId,
-      orderPlacedDate, quantity, itemPrice, costPrice, discount,
-      paymentStatus, paymentMode, itemStatus, inventoryStatus,
-      expectedDeliveryDate, orderDeliveredDate, notes,
-    } = req.body;
-
-    const qty = Number(quantity);
-    const price = Number(itemPrice);
-    const cost = Number(costPrice);
-    const disc = Number(discount || 0);
-
-    // Auto-calculated fields
-    const totalAmount = price * qty - disc;
-    const profit = totalAmount - cost * qty;
-
+    const items = buildSubmittedItems(req.body);
+    const linkedInventoryIds = getLinkedInventoryIds(items);
     const counterRef = db.collection('settings').doc('counters');
-
-    // If no inventoryItemId is provided, create order without inventory link
-    if (!inventoryItemId) {
-      let nextId = 1001;
-      const counterDoc = await counterRef.get();
-      if (counterDoc.exists) nextId = counterDoc.data().lastId + 1;
-      await counterRef.set({ lastId: nextId });
-
-      const orderData = {
-        orderId: `ORD-${nextId}`,
-        customerName, phone, address, platform,
-        customerStatus: customerStatus || 'New',
-        sareeBrand, materialType: materialType || '',
-        sareeColor: sareeColor || '',
-        inventoryItemId: '',
-        orderPlacedDate: orderPlacedDate || new Date().toISOString().split('T')[0],
-        quantity: qty, itemPrice: price, costPrice: cost,
-        discount: disc, totalAmount, profit,
-        paymentStatus, paymentMode,
-        itemStatus, inventoryStatus: inventoryStatus || 'Reserved',
-        expectedDeliveryDate: expectedDeliveryDate || '',
-        orderDeliveredDate: orderDeliveredDate || '',
-        notes: notes || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      const docRef = await db.collection('orders').add(orderData);
-      return res.status(201).json({
-        message: 'Order created successfully.',
-        order: { id: docRef.id, ...orderData },
-      });
-    }
-
-    // ─── Transactional order creation with inventory deduction ───
-    const invRef = db.collection('inventory').doc(inventoryItemId);
     const orderDocRef = db.collection('orders').doc(); // pre-generate doc ref
 
     const result = await db.runTransaction(async (t) => {
-      const invDoc = await t.get(invRef);
-      if (!invDoc.exists) {
-        throw new Error('Linked inventory item not found.');
+      const inventoryStates = new Map();
+      for (const invId of linkedInventoryIds) {
+        const invRef = db.collection('inventory').doc(invId);
+        const invDoc = await t.get(invRef);
+        inventoryStates.set(invId, {
+          ref: invRef,
+          exists: invDoc.exists,
+          data: invDoc.exists ? invDoc.data() : null,
+          changed: false,
+        });
       }
-
-      const inv = invDoc.data();
-      const { updatedVariants, totalQuantity, quantitySold, quantityRemaining, status } =
-        updateVariantStock(inv, sareeColor, materialType, qty, 'deduct');
 
       // Get and increment counter inside transaction
       const counterDoc = await t.get(counterRef);
@@ -182,38 +168,32 @@ router.post('/', validateOrder, async (req, res) => {
       if (counterDoc.exists) nextId = counterDoc.data().lastId + 1;
       t.set(counterRef, { lastId: nextId });
 
-      // Update inventory
-      t.update(invRef, {
-        variants: updatedVariants,
-        totalQuantity,
-        quantitySold,
-        quantityRemaining,
-        status,
-        updatedAt: new Date().toISOString(),
+      items.forEach((item) => applyInventoryMovement(inventoryStates, item, 'deduct', { requireExisting: true }));
+
+      const updatedAt = new Date().toISOString();
+      inventoryStates.forEach((state) => {
+        if (!state.changed) return;
+        t.update(state.ref, {
+          variants: state.data.variants,
+          totalQuantity: state.data.totalQuantity,
+          quantitySold: state.data.quantitySold,
+          quantityRemaining: state.data.quantityRemaining,
+          status: state.data.status,
+          updatedAt,
+        });
       });
 
       // Create the order
       const orderData = {
         orderId: `ORD-${nextId}`,
-        customerName, phone, address, platform,
-        customerStatus: customerStatus || 'New',
-        sareeBrand, materialType: materialType || '',
-        sareeColor: sareeColor || '',
-        inventoryItemId,
-        orderPlacedDate: orderPlacedDate || new Date().toISOString().split('T')[0],
-        quantity: qty, itemPrice: price, costPrice: cost,
-        discount: disc, totalAmount, profit,
-        paymentStatus, paymentMode,
-        itemStatus, inventoryStatus: inventoryStatus || 'Reserved',
-        expectedDeliveryDate: expectedDeliveryDate || '',
-        orderDeliveredDate: orderDeliveredDate || '',
-        notes: notes || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        ...buildOrderData(req.body, items, {
+          createdAt: updatedAt,
+          defaultOrderPlacedDate: new Date().toISOString().split('T')[0],
+        }),
       };
 
       t.set(orderDocRef, orderData);
-      return { id: orderDocRef.id, ...orderData };
+      return normalizeOrderForResponse({ id: orderDocRef.id, ...orderData });
     });
 
     return res.status(201).json({
@@ -246,7 +226,7 @@ router.get('/', async (req, res) => {
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      orders.push({ id: doc.id, ...data });
+      orders.push(normalizeOrderForResponse({ id: doc.id, ...data }));
 
       const dateStr = data.orderPlacedDate || data.createdAt;
       if (dateStr && typeof dateStr === 'string' && dateStr.length >= 7) {
@@ -329,145 +309,49 @@ router.put('/:id', validateOrder, async (req, res) => {
     }
 
     const oldOrder = orderDoc.data();
-    const {
-      customerName, phone, address, platform, customerStatus,
-      sareeBrand, materialType, sareeColor, inventoryItemId,
-      orderPlacedDate, quantity, itemPrice, costPrice, discount,
-      paymentStatus, paymentMode, itemStatus, inventoryStatus,
-      expectedDeliveryDate, orderDeliveredDate, notes,
-    } = req.body;
+    const oldItems = normalizeOrderItems(oldOrder);
+    const newItems = buildSubmittedItems(req.body);
+    const updateData = buildOrderData(req.body, newItems);
+    const linkedInventoryIds = getLinkedInventoryIds([...oldItems, ...newItems]);
 
-    const qty = Number(quantity);
-    const price = Number(itemPrice);
-    const cost = Number(costPrice);
-    const disc = Number(discount || 0);
-
-    const totalAmount = price * qty - disc;
-    const profit = totalAmount - cost * qty;
-
-    const updateData = {
-      customerName, phone, address, platform,
-      customerStatus: customerStatus || 'New',
-      sareeBrand, materialType: materialType || '',
-      sareeColor: sareeColor || '',
-      inventoryItemId: inventoryItemId || '',
-      orderPlacedDate: orderPlacedDate || '',
-      quantity: qty, itemPrice: price, costPrice: cost,
-      discount: disc, totalAmount, profit,
-      paymentStatus, paymentMode,
-      itemStatus, inventoryStatus: inventoryStatus || 'Reserved',
-      expectedDeliveryDate: expectedDeliveryDate || '',
-      orderDeliveredDate: orderDeliveredDate || '',
-      notes: notes || '',
-      updatedAt: new Date().toISOString(),
-    };
-
-    const oldInvId = oldOrder.inventoryItemId || '';
-    const newInvId = inventoryItemId || '';
-    const oldQty = Number(oldOrder.quantity) || 0;
-    const newQty = qty;
-    const oldColor = oldOrder.sareeColor || '';
-    const oldMat = oldOrder.materialType || '';
-    const newColor = sareeColor || '';
-    const newMat = materialType || '';
-
-    const inventoryChanged =
-      oldInvId !== newInvId ||
-      oldQty !== newQty ||
-      oldColor.trim().toLowerCase() !== newColor.trim().toLowerCase() ||
-      oldMat.trim().toLowerCase() !== newMat.trim().toLowerCase();
-
-    // If inventory linkage or quantity changed, use a transaction
-    if (inventoryChanged && (oldInvId || newInvId)) {
+    if (linkedInventoryIds.length > 0) {
       await db.runTransaction(async (t) => {
-        // ─── 1. ALL READS FIRST ───
-        let oldInvDoc = null;
-        let newInvDoc = null;
-
-        if (oldInvId) {
-          const oldInvRef = db.collection('inventory').doc(oldInvId);
-          oldInvDoc = await t.get(oldInvRef);
-        }
-
-        if (newInvId) {
-          if (newInvId === oldInvId) {
-            newInvDoc = oldInvDoc;
-          } else {
-            const newInvRef = db.collection('inventory').doc(newInvId);
-            newInvDoc = await t.get(newInvRef);
-          }
-        }
-
-        // ─── 2. CALCULATIONS & WRITES (NO READS PAST THIS POINT) ───
-
-        // Case A: Same inventory item, quantity changed
-        if (oldInvId && oldInvId === newInvId) {
-          if (!newInvDoc || !newInvDoc.exists) {
-            throw new Error('Linked inventory item not found.');
-          }
-
-          const inv = newInvDoc.data();
-          const restoreRes = updateVariantStock(inv, oldColor, oldMat, oldQty, 'restore');
-          const restoredInvState = { ...inv, variants: restoreRes.updatedVariants };
-          const deductRes = updateVariantStock(restoredInvState, newColor, newMat, newQty, 'deduct');
-
-          const invRef = db.collection('inventory').doc(newInvId);
-          t.update(invRef, {
-            variants: deductRes.updatedVariants,
-            totalQuantity: deductRes.totalQuantity,
-            quantitySold: deductRes.quantitySold,
-            quantityRemaining: deductRes.quantityRemaining,
-            status: deductRes.status,
-            updatedAt: new Date().toISOString(),
+        const inventoryStates = new Map();
+        for (const invId of linkedInventoryIds) {
+          const invRef = db.collection('inventory').doc(invId);
+          const invDoc = await t.get(invRef);
+          inventoryStates.set(invId, {
+            ref: invRef,
+            exists: invDoc.exists,
+            data: invDoc.exists ? invDoc.data() : null,
+            changed: false,
           });
-        } else {
-          // Case B: Different inventory items (or linking/unlinking item)
-
-          // Step B1: Restore old inventory item stock
-          if (oldInvId && oldInvDoc && oldInvDoc.exists) {
-            const oldInv = oldInvDoc.data();
-            const restoreRes = updateVariantStock(oldInv, oldColor, oldMat, oldQty, 'restore');
-
-            const oldInvRef = db.collection('inventory').doc(oldInvId);
-            t.update(oldInvRef, {
-              variants: restoreRes.updatedVariants,
-              totalQuantity: restoreRes.totalQuantity,
-              quantitySold: restoreRes.quantitySold,
-              quantityRemaining: restoreRes.quantityRemaining,
-              status: restoreRes.status,
-              updatedAt: new Date().toISOString(),
-            });
-          }
-
-          // Step B2: Deduct from new inventory item stock
-          if (newInvId) {
-            if (!newInvDoc || !newInvDoc.exists) {
-              throw new Error('Linked inventory item not found.');
-            }
-
-            const newInv = newInvDoc.data();
-            const deductRes = updateVariantStock(newInv, newColor, newMat, newQty, 'deduct');
-
-            const newInvRef = db.collection('inventory').doc(newInvId);
-            t.update(newInvRef, {
-              variants: deductRes.updatedVariants,
-              totalQuantity: deductRes.totalQuantity,
-              quantitySold: deductRes.quantitySold,
-              quantityRemaining: deductRes.quantityRemaining,
-              status: deductRes.status,
-              updatedAt: new Date().toISOString(),
-            });
-          }
         }
+
+        oldItems.forEach((item) => applyInventoryMovement(inventoryStates, item, 'restore'));
+        newItems.forEach((item) => applyInventoryMovement(inventoryStates, item, 'deduct', { requireExisting: true }));
+
+        const updatedAt = new Date().toISOString();
+        inventoryStates.forEach((state) => {
+          if (!state.changed) return;
+          t.update(state.ref, {
+            variants: state.data.variants,
+            totalQuantity: state.data.totalQuantity,
+            quantitySold: state.data.quantitySold,
+            quantityRemaining: state.data.quantityRemaining,
+            status: state.data.status,
+            updatedAt,
+          });
+        });
 
         // Update the order document
-        t.update(orderRef, updateData);
+        t.update(orderRef, { ...updateData, updatedAt });
       });
 
       const updatedDoc = await orderRef.get();
       return res.json({
         message: 'Order updated successfully.',
-        order: { id, ...updatedDoc.data() },
+        order: normalizeOrderForResponse({ id, ...updatedDoc.data() }),
       });
     }
 
@@ -475,7 +359,7 @@ router.put('/:id', validateOrder, async (req, res) => {
     await orderRef.update(updateData);
     return res.json({
       message: 'Order updated successfully.',
-      order: { id, ...oldOrder, ...updateData },
+      order: normalizeOrderForResponse({ id, ...oldOrder, ...updateData }),
     });
   } catch (err) {
     console.error('Update order error:', err);
@@ -500,27 +384,39 @@ router.delete('/:id', async (req, res) => {
     }
 
     const order = orderDoc.data();
-    const invId = order.inventoryItemId || '';
-    const qty = Number(order.quantity) || 0;
+    const items = normalizeOrderItems(order);
+    const linkedInventoryIds = getLinkedInventoryIds(items);
 
-    if (invId && qty > 0) {
+    if (linkedInventoryIds.length > 0) {
       // Restore stock in a transaction
       await db.runTransaction(async (t) => {
-        const invRef = db.collection('inventory').doc(invId);
-        const invDoc = await t.get(invRef);
-        if (invDoc.exists) {
-          const inv = invDoc.data();
-          const restoreRes = updateVariantStock(inv, order.sareeColor, order.materialType, qty, 'restore');
-
-          t.update(invRef, {
-            variants: restoreRes.updatedVariants,
-            totalQuantity: restoreRes.totalQuantity,
-            quantitySold: restoreRes.quantitySold,
-            quantityRemaining: restoreRes.quantityRemaining,
-            status: restoreRes.status,
-            updatedAt: new Date().toISOString(),
+        const inventoryStates = new Map();
+        for (const invId of linkedInventoryIds) {
+          const invRef = db.collection('inventory').doc(invId);
+          const invDoc = await t.get(invRef);
+          inventoryStates.set(invId, {
+            ref: invRef,
+            exists: invDoc.exists,
+            data: invDoc.exists ? invDoc.data() : null,
+            changed: false,
           });
         }
+
+        items.forEach((item) => applyInventoryMovement(inventoryStates, item, 'restore'));
+
+        const updatedAt = new Date().toISOString();
+        inventoryStates.forEach((state) => {
+          if (!state.changed) return;
+          t.update(state.ref, {
+            variants: state.data.variants,
+            totalQuantity: state.data.totalQuantity,
+            quantitySold: state.data.quantitySold,
+            quantityRemaining: state.data.quantityRemaining,
+            status: state.data.status,
+            updatedAt,
+          });
+        });
+
         t.delete(orderRef);
       });
     } else {
@@ -536,3 +432,5 @@ router.delete('/:id', async (req, res) => {
 
 module.exports = router;
 module.exports.updateVariantStock = updateVariantStock;
+module.exports.normalizeOrderItems = normalizeOrderItems;
+module.exports.normalizeOrderForResponse = normalizeOrderForResponse;

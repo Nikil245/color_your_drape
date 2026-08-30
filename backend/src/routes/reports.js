@@ -1,6 +1,12 @@
 const express = require('express');
 const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
+const {
+  normalizeOrderForResponse,
+  getPaidItemTotals,
+  money,
+  quantity,
+} = require('../utils/orderItems');
 
 const router = express.Router();
 
@@ -105,10 +111,6 @@ function customerKey(order) {
   return `name:${order.customerName?.trim()}`;
 }
 
-function money(value) {
-  return Number(value) || 0;
-}
-
 /**
  * GET /api/reports/summary
  * Query params:
@@ -126,27 +128,36 @@ router.get('/summary', async (req, res) => {
 
     const snapshot = await db.collection('orders').get();
     const allOrders = [];
-    snapshot.forEach((doc) => allOrders.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach((doc) => allOrders.push(normalizeOrderForResponse({ id: doc.id, ...doc.data() })));
 
     const filteredOrders = filterOrdersByDateRange(allOrders, startDate, endDate);
-    const paidOrders = filteredOrders.filter((order) => order.paymentStatus === 'Paid');
 
-    const totalSales = paidOrders.reduce((sum, order) => sum + money(order.totalAmount), 0);
-    const totalProfit = paidOrders.reduce((sum, order) => sum + money(order.profit), 0);
+    const paidTotals = filteredOrders.reduce((acc, order) => {
+      const itemTotals = getPaidItemTotals(order.items || []);
+      return {
+        totalAmount: acc.totalAmount + itemTotals.totalAmount,
+        profit: acc.profit + itemTotals.profit,
+      };
+    }, { totalAmount: 0, profit: 0 });
+
+    const totalSales = paidTotals.totalAmount;
+    const totalProfit = paidTotals.profit;
     const totalOrders = filteredOrders.length;
     const totalGrossValue = filteredOrders.reduce((sum, order) => sum + money(order.totalAmount), 0);
     const avgOrderValue = totalOrders > 0 ? Math.round(totalGrossValue / totalOrders) : 0;
 
     const brandMap = {};
     filteredOrders.forEach((order) => {
-      const brandName = order.sareeBrand || 'Unknown';
-      if (!brandMap[brandName]) {
-        brandMap[brandName] = { brandName, quantitySold: 0, revenue: 0 };
-      }
-      brandMap[brandName].quantitySold += Number(order.quantity) || 1;
-      if (order.paymentStatus === 'Paid') {
-        brandMap[brandName].revenue += money(order.totalAmount);
-      }
+      (order.items || []).forEach((item) => {
+        const brandName = item.sareeBrand || 'Unknown';
+        if (!brandMap[brandName]) {
+          brandMap[brandName] = { brandName, quantitySold: 0, revenue: 0 };
+        }
+        brandMap[brandName].quantitySold += quantity(item.quantity) || 1;
+        if (item.paymentStatus === 'Paid') {
+          brandMap[brandName].revenue += money(item.totalAmount);
+        }
+      });
     });
     const topSellingBrands = Object.values(brandMap)
       .sort((a, b) => b.quantitySold - a.quantitySold || b.revenue - a.revenue)
