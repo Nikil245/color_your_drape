@@ -50,10 +50,27 @@ function periodLabel(period, dateRange) {
   return periodOptions.find((option) => option.value === period)?.label || 'This Month';
 }
 
+const reportViewTitles = {
+  customer_summary: 'Customer Summary',
+  order_wise: 'Order-wise Report',
+  not_paid: 'Not Paid',
+};
+
+const paymentBadgeClass = (status) => {
+  const map = { Paid: 'badge-paid', Pending: 'badge-pending', Partial: 'badge-partial' };
+  return map[status] || 'badge-pending';
+};
+
+const statusBadgeClass = (status) => {
+  const map = { Delivered: 'badge-delivered', Shipped: 'badge-shipped', Confirmed: 'badge-confirmed', Packed: 'badge-packed', Returned: 'badge-returned' };
+  return map[status] || 'badge-pending';
+};
+
 export default function Reports() {
   const { settings } = useSettings();
   const [report, setReport] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState('this_month');
+  const [reportView, setReportView] = useState('customer_summary');
   const [startDate, setStartDate] = useState(monthStartIso());
   const [endDate, setEndDate] = useState(todayIso());
   const [loading, setLoading] = useState(true);
@@ -113,6 +130,17 @@ export default function Reports() {
     { label: 'Total Orders', value: report?.summary?.totalOrders ?? 0, icon: 'shopping_bag' },
     { label: 'Average Order Value', value: formatCurrency(report?.summary?.avgOrderValue), icon: 'receipt_long' },
   ];
+  const orderWiseRows = report?.orderWiseReport?.rows || [];
+  const orderWiseTotals = report?.orderWiseReport?.totals || {
+    sellingPrice: 0,
+    costPrice: 0,
+    discount: 0,
+    profit: 0,
+  };
+  const notPaidRows = report?.notPaidReport?.rows || [];
+  const notPaidTotals = report?.notPaidReport?.totals || {
+    sellingPrice: 0,
+  };
 
   return (
     <div className="reports-page animate-fade-in">
@@ -218,6 +246,36 @@ export default function Reports() {
             </div>
           </header>
 
+          <div className="report-view-tabs no-print" role="tablist" aria-label="Report view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={reportView === 'customer_summary'}
+              className={reportView === 'customer_summary' ? 'active' : ''}
+              onClick={() => setReportView('customer_summary')}
+            >
+              Customer Summary
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={reportView === 'order_wise'}
+              className={reportView === 'order_wise' ? 'active' : ''}
+              onClick={() => setReportView('order_wise')}
+            >
+              Order-wise Report
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={reportView === 'not_paid'}
+              className={reportView === 'not_paid' ? 'active' : ''}
+              onClick={() => setReportView('not_paid')}
+            >
+              Not Paid
+            </button>
+          </div>
+
           <section className="report-section">
             <div className="report-section-heading">
               <h3>Business Summary</h3>
@@ -251,10 +309,10 @@ export default function Reports() {
                   {report.topSellingBrands.length > 0 ? (
                     report.topSellingBrands.map((brand, index) => (
                       <tr key={brand.brandName}>
-                        <td>{index + 1}</td>
-                        <td>{brand.brandName}</td>
-                        <td>{brand.quantitySold}</td>
-                        <td>{formatCurrency(brand.revenue)}</td>
+                        <td data-label="Rank">{index + 1}</td>
+                        <td data-label="Brand Name">{brand.brandName}</td>
+                        <td data-label="Quantity Sold">{brand.quantitySold}</td>
+                        <td data-label="Revenue">{formatCurrency(brand.revenue)}</td>
                       </tr>
                     ))
                   ) : (
@@ -269,33 +327,135 @@ export default function Reports() {
 
           <section className="report-section">
             <div className="report-section-heading">
-              <h3>Customer Summary</h3>
+              <h3>{reportViewTitles[reportView]}</h3>
             </div>
             <div className="report-table-wrap">
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Number of Orders</th>
-                    <th>Total Spent</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.customerSummary.length > 0 ? (
-                    report.customerSummary.map((customer) => (
-                      <tr key={`${customer.name}-${customer.phone}`}>
-                        <td>{customer.name}</td>
-                        <td>{customer.totalOrders}</td>
-                        <td>{formatCurrency(customer.totalSpent)}</td>
-                      </tr>
-                    ))
-                  ) : (
+              {reportView === 'customer_summary' && (
+                <table className="report-table">
+                  <thead>
                     <tr>
-                      <td colSpan="3">No customers found for this period.</td>
+                      <th>Name</th>
+                      <th>Number of Orders</th>
+                      <th>Total Spent</th>
                     </tr>
+                  </thead>
+                  <tbody>
+                    {report.customerSummary.length > 0 ? (
+                      report.customerSummary.map((customer) => (
+                        <tr key={`${customer.name}-${customer.phone}`}>
+                          <td data-label="Name">{customer.name}</td>
+                          <td data-label="Number of Orders">{customer.totalOrders}</td>
+                          <td data-label="Total Spent">{formatCurrency(customer.totalSpent)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3">No customers found for this period.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+
+              {reportView === 'order_wise' && (
+                <table className="report-table order-wise-table">
+                  <thead>
+                    <tr>
+                      <th>SI.No</th>
+                      <th>Name</th>
+                      <th>Order Date</th>
+                      <th>Selling Price</th>
+                      <th>Actual Price</th>
+                      <th>Discount</th>
+                      <th>Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderWiseRows.length > 0 ? (
+                      orderWiseRows.map((item, index) => (
+                        <tr key={`${item.orderId}-${item.lineItemId || index}`}>
+                          <td data-label="SI.No">{index + 1}</td>
+                          <td data-label="Name">{item.name}</td>
+                          <td data-label="Order Date">{formatDate(item.orderDate)}</td>
+                          <td data-label="Selling Price">{formatCurrency(item.sellingPrice)}</td>
+                          <td data-label="Actual Price">{formatCurrency(item.costPrice)}</td>
+                          <td data-label="Discount">{item.discount ? formatCurrency(item.discount) : '-'}</td>
+                          <td data-label="Profit">{formatCurrency(item.profit)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7">No order line items found for this period.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {orderWiseRows.length > 0 && (
+                    <tfoot>
+                      <tr>
+                        <td data-label="SI.No"></td>
+                        <td data-label="Name">Total</td>
+                        <td data-label="Order Date"></td>
+                        <td data-label="Selling Price">{formatCurrency(orderWiseTotals.sellingPrice)}</td>
+                        <td data-label="Actual Price">{formatCurrency(orderWiseTotals.costPrice)}</td>
+                        <td data-label="Discount">{orderWiseTotals.discount ? formatCurrency(orderWiseTotals.discount) : '-'}</td>
+                        <td data-label="Profit">{formatCurrency(orderWiseTotals.profit)}</td>
+                      </tr>
+                    </tfoot>
                   )}
-                </tbody>
-              </table>
+                </table>
+              )}
+
+              {reportView === 'not_paid' && (
+                <table className="report-table not-paid-table">
+                  <thead>
+                    <tr>
+                      <th>SI.No</th>
+                      <th>Customer Name</th>
+                      <th>Order Date</th>
+                      <th>Saree Brand / Collection</th>
+                      <th>Selling Price</th>
+                      <th>Payment Status</th>
+                      <th>Item Status / Delivery Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notPaidRows.length > 0 ? (
+                      notPaidRows.map((item, index) => (
+                        <tr key={`${item.orderId}-${item.lineItemId || index}`}>
+                          <td data-label="SI.No">{index + 1}</td>
+                          <td data-label="Customer Name">{item.customerName}</td>
+                          <td data-label="Order Date">{formatDate(item.orderDate)}</td>
+                          <td data-label="Saree Brand / Collection">{item.sareeCollection}</td>
+                          <td data-label="Selling Price">{formatCurrency(item.outstandingAmount)}</td>
+                          <td data-label="Payment Status">
+                            <span className={`badge ${paymentBadgeClass(item.paymentStatus)}`}>{item.paymentStatus}</span>
+                          </td>
+                          <td data-label="Item Status / Delivery Status">
+                            <span className={`badge ${statusBadgeClass(item.itemStatus)}`}>{item.itemStatus || 'Pending'}</span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7">No unpaid line items found for this period.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {notPaidRows.length > 0 && (
+                    <tfoot>
+                      <tr>
+                        <td data-label="SI.No"></td>
+                        <td data-label="Customer Name">Total Outstanding</td>
+                        <td data-label="Order Date"></td>
+                        <td data-label="Saree Brand / Collection"></td>
+                        <td data-label="Selling Price">{formatCurrency(notPaidTotals.sellingPrice)}</td>
+                        <td data-label="Payment Status"></td>
+                        <td data-label="Item Status / Delivery Status"></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              )}
             </div>
           </section>
 

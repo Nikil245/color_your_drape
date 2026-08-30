@@ -111,6 +111,126 @@ function customerKey(order) {
   return `name:${order.customerName?.trim()}`;
 }
 
+function isPaidItem(item) {
+  return item.paymentStatus === 'Paid';
+}
+
+function isNotPaidItem(item) {
+  return item.paymentStatus === 'Pending' || item.paymentStatus === 'Partial';
+}
+
+function sortOrdersByDate(orders) {
+  return [...orders].sort((a, b) => {
+    const dateCompare = getOrderDate(a).localeCompare(getOrderDate(b));
+    if (dateCompare !== 0) return dateCompare;
+    return (a.createdAt || '').localeCompare(b.createdAt || '') || (a.id || '').localeCompare(b.id || '');
+  });
+}
+
+function sareeCollection(item) {
+  return `${item.sareeBrand || 'Unknown'}${item.sareeColor ? ` - ${item.sareeColor}` : ''}`;
+}
+
+function buildCustomerSummary(orders) {
+  const customerMap = {};
+
+  orders.forEach((order) => {
+    const paidItems = (order.items || []).filter(isPaidItem);
+    if (paidItems.length === 0) return;
+
+    const key = customerKey(order);
+    if (!customerMap[key]) {
+      customerMap[key] = {
+        name: order.customerName || 'Unknown',
+        phone: order.phone || '',
+        totalOrders: 0,
+        totalSpent: 0,
+      };
+    }
+
+    customerMap[key].totalOrders += 1;
+    customerMap[key].totalSpent += paidItems.reduce((sum, item) => sum + money(item.totalAmount), 0);
+  });
+
+  return Object.values(customerMap)
+    .sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders);
+}
+
+function buildOrderWiseReport(orders) {
+  const rows = [];
+  const totals = {
+    sellingPrice: 0,
+    costPrice: 0,
+    discount: 0,
+    profit: 0,
+  };
+  const sortedOrders = sortOrdersByDate(orders);
+
+  sortedOrders.forEach((order) => {
+    (order.items || []).filter(isPaidItem).forEach((item) => {
+      const itemQuantity = quantity(item.quantity) || 1;
+      const sellingPrice = money(item.itemPrice);
+      const costPrice = money(item.costPrice);
+      const discount = money(item.discount);
+      const profit = money(item.profit);
+
+      rows.push({
+        orderId: order.id,
+        lineItemId: item.lineItemId,
+        name: order.customerName || 'Unknown',
+        orderDate: order.orderPlacedDate || '',
+        sellingPrice,
+        costPrice,
+        discount,
+        profit,
+        quantity: itemQuantity,
+        sellingPriceTotal: sellingPrice * itemQuantity,
+        costPriceTotal: costPrice * itemQuantity,
+      });
+
+      totals.sellingPrice += sellingPrice * itemQuantity;
+      totals.costPrice += costPrice * itemQuantity;
+      totals.discount += discount;
+      totals.profit += profit;
+    });
+  });
+
+  return { rows, totals };
+}
+
+function buildNotPaidReport(orders) {
+  const rows = [];
+  const totals = {
+    sellingPrice: 0,
+  };
+  const sortedOrders = sortOrdersByDate(orders);
+
+  sortedOrders.forEach((order) => {
+    (order.items || []).filter(isNotPaidItem).forEach((item) => {
+      const itemQuantity = quantity(item.quantity) || 1;
+      const sellingPrice = money(item.itemPrice);
+      const outstandingAmount = money(item.totalAmount);
+
+      rows.push({
+        orderId: order.id,
+        lineItemId: item.lineItemId,
+        customerName: order.customerName || 'Unknown',
+        orderDate: order.orderPlacedDate || '',
+        sareeCollection: sareeCollection(item),
+        sellingPrice,
+        quantity: itemQuantity,
+        outstandingAmount,
+        paymentStatus: item.paymentStatus,
+        itemStatus: item.itemStatus || order.itemStatus || '',
+      });
+
+      totals.sellingPrice += outstandingAmount;
+    });
+  });
+
+  return { rows, totals };
+}
+
 /**
  * GET /api/reports/summary
  * Query params:
@@ -163,22 +283,9 @@ router.get('/summary', async (req, res) => {
       .sort((a, b) => b.quantitySold - a.quantitySold || b.revenue - a.revenue)
       .slice(0, 10);
 
-    const customerMap = {};
-    filteredOrders.forEach((order) => {
-      const key = customerKey(order);
-      if (!customerMap[key]) {
-        customerMap[key] = {
-          name: order.customerName || 'Unknown',
-          phone: order.phone || '',
-          totalOrders: 0,
-          totalSpent: 0,
-        };
-      }
-      customerMap[key].totalOrders += 1;
-      customerMap[key].totalSpent += money(order.totalAmount);
-    });
-    const customerSummary = Object.values(customerMap)
-      .sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders);
+    const customerSummary = buildCustomerSummary(filteredOrders);
+    const orderWiseReport = buildOrderWiseReport(filteredOrders);
+    const notPaidReport = buildNotPaidReport(filteredOrders);
 
     const paymentStatuses = ['Paid', 'Pending', 'Partial'];
     const paymentMap = paymentStatuses.reduce((acc, status) => {
@@ -198,6 +305,8 @@ router.get('/summary', async (req, res) => {
       summary: { totalSales, totalProfit, totalOrders, avgOrderValue },
       topSellingBrands,
       customerSummary,
+      orderWiseReport,
+      notPaidReport,
       paymentStatusBreakdown: paymentStatuses.map((status) => paymentMap[status]),
     });
   } catch (err) {

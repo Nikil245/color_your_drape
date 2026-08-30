@@ -178,6 +178,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-sm);
   margin-bottom: var(--space-sm);
 }
 
@@ -186,6 +187,32 @@
   font-size: 22px;
   line-height: 30px;
   color: var(--color-primary);
+}
+
+.report-view-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 8px;
+}
+
+.report-view-tabs button {
+  min-height: 36px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.report-view-tabs button.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .report-summary-grid {
@@ -268,6 +295,71 @@
 .report-table td:nth-child(3),
 .report-table td:nth-child(4) {
   text-align: right;
+}
+
+.order-wise-table,
+.not-paid-table {
+  min-width: 840px;
+}
+
+.order-wise-table th:nth-child(1),
+.order-wise-table td:nth-child(1),
+.not-paid-table th:nth-child(1),
+.not-paid-table td:nth-child(1) {
+  text-align: center;
+  width: 72px;
+}
+
+.order-wise-table th:nth-child(4),
+.order-wise-table th:nth-child(5),
+.order-wise-table th:nth-child(6),
+.order-wise-table th:nth-child(7),
+.order-wise-table td:nth-child(4),
+.order-wise-table td:nth-child(5),
+.order-wise-table td:nth-child(6),
+.order-wise-table td:nth-child(7) {
+  text-align: right;
+}
+
+.order-wise-table th:nth-child(3),
+.order-wise-table td:nth-child(3),
+.order-wise-table tfoot td:nth-child(3) {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.not-paid-table {
+  min-width: 960px;
+}
+
+.not-paid-table th:nth-child(3),
+.not-paid-table th:nth-child(4),
+.not-paid-table td:nth-child(3),
+.not-paid-table td:nth-child(4),
+.not-paid-table tfoot td:nth-child(3),
+.not-paid-table tfoot td:nth-child(4) {
+  text-align: left;
+}
+
+.not-paid-table th:nth-child(3),
+.not-paid-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.not-paid-table th:nth-child(5),
+.not-paid-table td:nth-child(5) {
+  text-align: right;
+}
+
+.not-paid-table .badge {
+  white-space: nowrap;
+}
+
+.report-table tfoot td {
+  background: var(--color-surface-container-low);
+  border-top: 2px solid var(--color-gold);
+  border-bottom: none;
+  font-weight: 800;
 }
 
 .report-payment-grid {
@@ -418,6 +510,20 @@
     line-height: 28px;
   }
 
+  .report-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-view-tabs {
+    width: 100%;
+  }
+
+  .report-view-tabs button {
+    flex: 1;
+    padding: 8px;
+  }
+
   .report-summary-grid,
   .report-payment-grid {
     grid-template-columns: 1fr;
@@ -456,6 +562,12 @@
     gap: 14px;
   }
 
+  .report-table tfoot {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-top: 14px;
+  }
+
   .report-table tr {
     display: block;
     padding: 14px;
@@ -484,40 +596,13 @@
 
   .report-table td::before {
     flex: 0 0 44%;
+    content: attr(data-label);
     color: var(--color-on-surface-variant);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-align: left;
     text-transform: uppercase;
-  }
-
-  .report-table td:nth-child(1)::before {
-    content: "Rank";
-  }
-
-  .report-table td:nth-child(2)::before {
-    content: "Brand Name";
-  }
-
-  .report-table td:nth-child(3)::before {
-    content: "Quantity Sold";
-  }
-
-  .report-table td:nth-child(4)::before {
-    content: "Revenue";
-  }
-
-  .report-section:nth-of-type(3) .report-table td:nth-child(1)::before {
-    content: "Name";
-  }
-
-  .report-section:nth-of-type(3) .report-table td:nth-child(2)::before {
-    content: "Number of Orders";
-  }
-
-  .report-section:nth-of-type(3) .report-table td:nth-child(3)::before {
-    content: "Total Spent";
   }
 
   .report-table td[colspan] {
@@ -527,6 +612,11 @@
 
   .report-table td[colspan]::before {
     content: none;
+  }
+
+  .report-table tfoot tr {
+    background: var(--color-surface-container-low);
+    border-top: 2px solid var(--color-gold);
   }
 
   .payment-breakdown-item {
@@ -724,6 +814,23 @@
   .report-table th {
     background: #f2f2f2 !important;
     color: #111111 !important;
+  }
+
+  .report-table tfoot td {
+    background: #f2f2f2 !important;
+    border-top: 1.5pt solid #111111 !important;
+    font-weight: 800;
+  }
+
+  .report-table .badge {
+    background: #ffffff !important;
+    border-color: #777777 !important;
+    color: #111111 !important;
+  }
+
+  .order-wise-table,
+  .not-paid-table {
+    font-size: 8.5pt;
   }
 
   .report-payment-grid {
