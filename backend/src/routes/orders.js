@@ -9,6 +9,7 @@ const {
   buildSubmittedItems,
   buildOrderData,
   getLinkedInventoryIds,
+  matchesOrderPaymentFilter,
 } = require('../utils/orderItems');
 
 const router = express.Router();
@@ -133,6 +134,10 @@ function applyInventoryMovement(inventoryStates, item, action, options = {}) {
   });
 }
 
+function getOrderDate(order) {
+  return order.orderPlacedDate || (order.createdAt ? order.createdAt.split('T')[0] : '');
+}
+
 /**
  * POST /api/orders — Create a new order
  *
@@ -228,7 +233,7 @@ router.get('/', async (req, res) => {
       const data = doc.data();
       orders.push(normalizeOrderForResponse({ id: doc.id, ...data }));
 
-      const dateStr = data.orderPlacedDate || data.createdAt;
+      const dateStr = getOrderDate(data);
       if (dateStr && typeof dateStr === 'string' && dateStr.length >= 7) {
         const ym = dateStr.substring(0, 7);
         if (/^\d{4}-\d{2}$/.test(ym)) {
@@ -249,7 +254,7 @@ router.get('/', async (req, res) => {
     // Apply month filter
     if (month && month !== 'all') {
       orders = orders.filter((o) => {
-        const d = o.orderPlacedDate || o.createdAt || '';
+        const d = getOrderDate(o);
         return typeof d === 'string' && d.startsWith(month);
       });
     }
@@ -263,20 +268,16 @@ router.get('/', async (req, res) => {
       }
     }
     if (payment) {
-      if (payment === 'Pending') {
-        orders = orders.filter((o) => o.paymentStatus === 'Pending' || o.paymentStatus === 'Partial');
-      } else {
-        orders = orders.filter((o) => o.paymentStatus === payment);
-      }
+      orders = orders.filter((o) => matchesOrderPaymentFilter(o, payment));
     }
     if (platform) {
       orders = orders.filter((o) => o.platform === platform);
     }
     if (startDate) {
-      orders = orders.filter((o) => o.orderPlacedDate >= startDate);
+      orders = orders.filter((o) => getOrderDate(o) >= startDate);
     }
     if (endDate) {
-      orders = orders.filter((o) => o.orderPlacedDate <= endDate);
+      orders = orders.filter((o) => getOrderDate(o) <= endDate);
     }
     if (search) {
       const q = search.toLowerCase();

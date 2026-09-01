@@ -17,7 +17,7 @@ const kpiConfig = [
   { key: 'totalOrders', label: 'Total Orders', icon: 'shopping_bag', prefix: '', borderColor: 'var(--color-tertiary-container)' },
   { key: 'avgOrderValue', label: 'Avg Order Value', icon: 'receipt_long', prefix: '₹', borderColor: 'var(--color-outline)' },
   { key: 'pendingDeliveries', label: 'Pending Deliveries', icon: 'local_shipping', prefix: '', borderColor: 'var(--color-error)', clickable: true, linkTo: '/orders?tab=history&status=PendingDelivery' },
-  { key: 'paymentPending', label: 'Payment Pending', icon: 'pending_actions', prefix: '', borderColor: '#D9782D', clickable: true, linkTo: '/orders?tab=history&payment=Pending' },
+  { key: 'paymentPending', label: 'Payment Pending', icon: 'pending_actions', prefix: '', borderColor: '#D9782D', clickable: true, linkTo: '/orders?tab=history&payment=PaymentPending' },
   { key: 'lowStockItems', label: 'Low Stock Items', icon: 'inventory_2', prefix: '', borderColor: 'var(--color-gold)' },
 ];
 

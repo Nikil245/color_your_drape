@@ -93,6 +93,21 @@ function deriveOrderPaymentStatus(items) {
   return 'Partial';
 }
 
+function hasPendingOrPartialPayment(items) {
+  return items.some((item) => ['Pending', 'Partial'].includes(normalizePaymentStatus(item.paymentStatus)));
+}
+
+function matchesOrderPaymentFilter(order, payment) {
+  if (!payment) return true;
+
+  const items = normalizeOrderItems(order);
+  if (payment === 'PaymentPending' || payment === 'payment_pending') {
+    return hasPendingOrPartialPayment(items);
+  }
+
+  return deriveOrderPaymentStatus(items) === payment;
+}
+
 function getPaidItemTotals(items) {
   return items
     .filter((item) => item.paymentStatus === 'Paid')
@@ -184,6 +199,8 @@ module.exports = {
   quantity,
   normalizePaymentStatus,
   deriveOrderPaymentStatus,
+  hasPendingOrPartialPayment,
+  matchesOrderPaymentFilter,
   getPaidItemTotals,
   normalizeOrderItems,
   normalizeOrderForResponse,

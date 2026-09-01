@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
+const { normalizeOrderForResponse } = require('../utils/orderItems');
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.get('/', async (req, res) => {
     const monthSet = new Set();
 
     snapshot.forEach((doc) => {
-      const order = doc.data();
+      const order = normalizeOrderForResponse({ id: doc.id, ...doc.data() });
       const dateStr = order.orderPlacedDate || order.createdAt;
       if (dateStr && typeof dateStr === 'string' && dateStr.length >= 7) {
         const ym = dateStr.substring(0, 7);
@@ -129,7 +130,7 @@ router.get('/:key', async (req, res) => {
     let customer = null;
 
     snapshot.forEach((doc) => {
-      const order = { id: doc.id, ...doc.data() };
+      const order = normalizeOrderForResponse({ id: doc.id, ...doc.data() });
       const key = customerKey(order);
 
       if (key === requestedKey) {

@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/auth');
 const {
   normalizeOrderForResponse,
   getPaidItemTotals,
+  hasPendingOrPartialPayment,
   quantity,
 } = require('../utils/orderItems');
 
@@ -153,7 +154,7 @@ router.get('/summary', async (req, res) => {
 
     // Payment Pending KPI (Scoped to filtered period)
     const paymentPending = filteredOrders.filter(
-      (o) => o.paymentStatus === 'Pending' || o.paymentStatus === 'Partial'
+      (o) => hasPendingOrPartialPayment(o.items || [])
     ).length;
 
     const invSnapshot = await db.collection('inventory').get();

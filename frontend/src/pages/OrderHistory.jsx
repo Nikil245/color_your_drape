@@ -48,13 +48,14 @@ export default function OrderHistory() {
   }, [searchParams]);
 
   const fetchOrders = async (activeFilters = filters) => {
+    const effectiveFilters = activeFilters?.target ? filters : activeFilters;
     setLoading(true);
     try {
       const params = { search };
-      if (activeFilters.status) params.status = activeFilters.status;
-      if (activeFilters.payment) params.payment = activeFilters.payment;
-      if (activeFilters.platform) params.platform = activeFilters.platform;
-      if (activeFilters.month && activeFilters.month !== 'all') params.month = activeFilters.month;
+      if (effectiveFilters.status) params.status = effectiveFilters.status;
+      if (effectiveFilters.payment) params.payment = effectiveFilters.payment;
+      if (effectiveFilters.platform) params.platform = effectiveFilters.platform;
+      if (effectiveFilters.month && effectiveFilters.month !== 'all') params.month = effectiveFilters.month;
       const res = await ordersAPI.list(params);
       setOrders(res.data.orders);
       if (res.data.availableMonths) {
@@ -128,6 +129,7 @@ export default function OrderHistory() {
           <select className="filter-select" value={filters.payment}
             onChange={(e) => setFilters((p) => ({ ...p, payment: e.target.value }))}>
             <option value="">Payment</option><option>Paid</option><option>Pending</option><option>Partial</option>
+            <option value="PaymentPending">Payment Pending</option>
           </select>
           <select className="filter-select" value={filters.platform}
             onChange={(e) => setFilters((p) => ({ ...p, platform: e.target.value }))}>
@@ -140,7 +142,7 @@ export default function OrderHistory() {
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
-          <button className="btn-secondary" onClick={fetchOrders} style={{ padding: '8px 20px' }}>
+          <button className="btn-secondary" onClick={() => fetchOrders()} style={{ padding: '8px 20px' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>filter_list</span> Apply
           </button>
         </div>
