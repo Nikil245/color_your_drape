@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { customersAPI } from '../services/api';
 import './Customers.css';
 
@@ -68,7 +68,7 @@ export default function Customers() {
   const fetchCustomers = async (targetMonth = month) => {
     setLoading(true);
     try {
-      const params = { search };
+      const params = {};
       if (targetMonth && targetMonth !== 'all') params.month = targetMonth;
       const res = await customersAPI.list(params);
       setCustomers(res.data.customers);
@@ -99,6 +99,11 @@ export default function Customers() {
   };
 
   const selectedMonthLabel = availableMonths.find((m) => m.value === month)?.label || month;
+  const filteredCustomers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return customers;
+    return customers.filter((customer) => customer.name?.toLowerCase().includes(query));
+  }, [customers, search]);
 
   return (
     <div className="customers-page animate-fade-in">
@@ -113,8 +118,7 @@ export default function Customers() {
           <div className="customer-search-wrap">
             <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-on-surface-variant)' }}>search</span>
             <input className="form-input" style={{ paddingLeft: 40 }} placeholder="Search customers..."
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchCustomers()} />
+              value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <select className="filter-select" value={month}
             onChange={(e) => setMonth(e.target.value)}>
@@ -133,16 +137,16 @@ export default function Customers() {
       {month !== 'all' && !loading && (
         <div className="cust-month-summary">
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>calendar_month</span>
-          <span>{customers.length} {customers.length === 1 ? 'customer' : 'customers'} ordered in {selectedMonthLabel}</span>
+          <span>{filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'} ordered in {selectedMonthLabel}</span>
         </div>
       )}
 
       {loading ? (
         <div className="empty-state"><div className="spinner" /></div>
-      ) : customers.length === 0 ? (
+      ) : filteredCustomers.length === 0 ? (
         <div className="empty-state">
           <span className="material-symbols-outlined">group</span>
-          <p>No customers found for the selected period.</p>
+          <p>{search ? 'No customers match your search.' : 'No customers found for the selected period.'}</p>
         </div>
       ) : (
         <div className="customers-list glass-card">
@@ -156,7 +160,7 @@ export default function Customers() {
           </div>
 
           <div className="cust-body">
-            {customers.map((c, i) => {
+            {filteredCustomers.map((c, i) => {
               const loc = parseLocation(c.address);
               return (
                 <div key={i} className="cust-row" onClick={() => openCustomerDetail(c)} role="button" tabIndex={0}
@@ -302,21 +306,32 @@ export default function Customers() {
                               <span className={`badge ${itemBadge(o.itemStatus)}`}>{o.itemStatus}</span>
                             </div>
                             <div className="cust-detail-order-body">
+                              {(o.items || []).map((item, index) => (
+                                <div className="cust-detail-order-item" key={item.lineItemId || index}>
+                                  {o.items.length > 1 && (
+                                    <div className="cust-detail-order-item-title">Saree {index + 1}</div>
+                                  )}
+                                  <div className="cust-detail-order-row">
+                                    <span className="cust-detail-order-label">Saree</span>
+                                    <span>{item.sareeBrand}{item.materialType ? ` · ${item.materialType}` : ''}{item.sareeColor ? ` · ${item.sareeColor}` : ''}</span>
+                                  </div>
+                                  <div className="cust-detail-order-row">
+                                    <span className="cust-detail-order-label">Qty × Price</span>
+                                    <span>{item.quantity} × {formatCurrency(item.itemPrice)}</span>
+                                  </div>
+                                  <div className="cust-detail-order-row">
+                                    <span className="cust-detail-order-label">Line Total</span>
+                                    <span>{formatCurrency(item.totalAmount)}</span>
+                                  </div>
+                                  <div className="cust-detail-order-row">
+                                    <span className="cust-detail-order-label">Payment</span>
+                                    <span className={`badge ${payBadge(item.paymentStatus)}`}>{item.paymentStatus}</span>
+                                  </div>
+                                </div>
+                              ))}
                               <div className="cust-detail-order-row">
-                                <span className="cust-detail-order-label">Saree</span>
-                                <span>{o.sareeBrand}{o.materialType ? ` · ${o.materialType}` : ''}{o.sareeColor ? ` · ${o.sareeColor}` : ''}</span>
-                              </div>
-                              <div className="cust-detail-order-row">
-                                <span className="cust-detail-order-label">Qty × Price</span>
-                                <span>{o.quantity} × {formatCurrency(o.itemPrice)}</span>
-                              </div>
-                              <div className="cust-detail-order-row">
-                                <span className="cust-detail-order-label">Total</span>
+                                <span className="cust-detail-order-label">Order Total</span>
                                 <span style={{ fontWeight: 700, color: 'var(--color-secondary)' }}>{formatCurrency(o.totalAmount)}</span>
-                              </div>
-                              <div className="cust-detail-order-row">
-                                <span className="cust-detail-order-label">Payment</span>
-                                <span className={`badge ${payBadge(o.paymentStatus)}`}>{o.paymentStatus}</span>
                               </div>
                               <div className="cust-detail-order-row">
                                 <span className="cust-detail-order-label">Ordered</span>

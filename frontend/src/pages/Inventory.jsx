@@ -8,6 +8,19 @@ function formatCurrency(num) {
   return '₹' + Number(num).toLocaleString('en-IN');
 }
 
+function formatVariantPriceRange(variants, field) {
+  const prices = (variants || [])
+    .map((variant) => Number(variant[field]))
+    .filter(Number.isFinite);
+
+  if (prices.length === 0) return '₹0';
+  const minimum = Math.min(...prices);
+  const maximum = Math.max(...prices);
+  return minimum === maximum
+    ? formatCurrency(minimum)
+    : `${formatCurrency(minimum)}–${formatCurrency(maximum)}`;
+}
+
 function deriveStatus(remaining) {
   if (remaining <= 0) return 'Out of Stock';
   if (remaining <= 5) return 'Low Stock';
@@ -20,12 +33,17 @@ const statusBadgeClass = (status) => {
   return 'badge-out-of-stock';
 };
 
-const emptyForm = {
+const createEmptyVariant = () => ({
+  color: '', material: '', quantity: '', purchasePrice: '', sellingPrice: '',
+});
+
+const createEmptyForm = () => ({
   stockReceivedDate: new Date().toISOString().split('T')[0],
-  brandName: '', variants: [{ color: '', material: '', quantity: '' }],
-  purchasePrice: '', sellingPrice: '', supplierName: '',
+  brandName: '',
+  variants: [createEmptyVariant()],
+  supplierName: '',
   supplierPhone: '', supplierAddress: '', remarks: '',
-};
+});
 
 export default function Inventory() {
   const [items, setItems] = useState([]);
@@ -34,7 +52,7 @@ export default function Inventory() {
   const [filters, setFilters] = useState({ status: '', brand: '' });
   const [brands, setBrands] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ ...emptyForm });
+  const [formData, setFormData] = useState(createEmptyForm);
   const [saving, setSaving] = useState(false);
   // Edit drawer state
   const [editDrawer, setEditDrawer] = useState(null);
@@ -71,7 +89,7 @@ export default function Inventory() {
     try {
       await inventoryAPI.create(formData);
       addToast('Stock entry added!', 'success');
-      setFormData({ ...emptyForm });
+      setFormData(createEmptyForm());
       setShowForm(false);
       fetchItems();
       fetchBrands();
@@ -92,14 +110,17 @@ export default function Inventory() {
             material: v.material || '',
             quantity: v.quantity || 0,
             quantitySold: v.quantitySold || 0,
+            purchasePrice: v.purchasePrice ?? item.purchasePrice ?? '',
+            sellingPrice: v.sellingPrice ?? item.sellingPrice ?? '',
           }))
         : [{
             color: item.sareeColor || '',
             material: item.materialType || '',
             quantity: item.quantityReceived || 0,
             quantitySold: item.quantitySold || 0,
+            purchasePrice: item.purchasePrice ?? '',
+            sellingPrice: item.sellingPrice ?? '',
           }],
-      purchasePrice: item.purchasePrice, sellingPrice: item.sellingPrice,
       supplierName: item.supplierName,
       supplierPhone: item.supplierPhone || '',
       supplierAddress: item.supplierAddress || '',
@@ -197,6 +218,24 @@ export default function Inventory() {
                           handleFormChange('variants', newV);
                         }} required />
                     </div>
+                    <div className="form-field" style={{ flex: '0 1 150px' }}>
+                      <label className="form-label">Purchase Price (₹)</label>
+                      <input type="number" min="0" className="form-input" placeholder="₹" value={v.purchasePrice}
+                        onChange={(e) => {
+                          const newV = [...formData.variants];
+                          newV[idx].purchasePrice = e.target.value;
+                          handleFormChange('variants', newV);
+                        }} required />
+                    </div>
+                    <div className="form-field" style={{ flex: '0 1 150px' }}>
+                      <label className="form-label">Selling Price (₹)</label>
+                      <input type="number" min="0" className="form-input" placeholder="₹" value={v.sellingPrice}
+                        onChange={(e) => {
+                          const newV = [...formData.variants];
+                          newV[idx].sellingPrice = e.target.value;
+                          handleFormChange('variants', newV);
+                        }} required />
+                    </div>
                     {idx > 0 && (
                       <button type="button" className="action-btn action-btn-delete" onClick={() => {
                         const newV = formData.variants.filter((_, i) => i !== idx);
@@ -208,7 +247,7 @@ export default function Inventory() {
                   </div>
                 ))}
                 <button type="button" className="btn-secondary" style={{ marginTop: '8px' }} onClick={() => {
-                  handleFormChange('variants', [...formData.variants, { color: '', material: '', quantity: '' }]);
+                  handleFormChange('variants', [...formData.variants, createEmptyVariant()]);
                 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
                   Add Another Variant
@@ -220,16 +259,6 @@ export default function Inventory() {
                 <div className="form-input" style={{ backgroundColor: 'var(--color-surface-variant)', fontWeight: 'bold' }}>
                   {formData.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0)}
                 </div>
-              </div>
-              <div className="form-field">
-                <label className="form-label">Purchase Price (₹)</label>
-                <input type="number" min="0" className="form-input" placeholder="₹" value={formData.purchasePrice}
-                  onChange={(e) => handleFormChange('purchasePrice', e.target.value)} required />
-              </div>
-              <div className="form-field">
-                <label className="form-label">Selling Price (₹)</label>
-                <input type="number" min="0" className="form-input" placeholder="₹" value={formData.sellingPrice}
-                  onChange={(e) => handleFormChange('sellingPrice', e.target.value)} required />
               </div>
               <div className="form-field">
                 <label className="form-label">Supplier Name</label>
@@ -253,7 +282,7 @@ export default function Inventory() {
               </div>
             </div>
             <div className="inventory-form-actions">
-              <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setFormData({ ...emptyForm }); }}>
+              <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setFormData(createEmptyForm()); }}>
                 Cancel
               </button>
               <button type="submit" className="btn-primary" disabled={saving}>
@@ -328,8 +357,8 @@ export default function Inventory() {
                       <td className="inv-qty-cell">{item.quantitySold || 0}</td>
                       <td className={`inv-qty-cell ${remClass}`}>{remaining}</td>
                       <td><span className={`badge ${statusBadgeClass(status)}`}>{status}</span></td>
-                      <td>{formatCurrency(item.purchasePrice)}</td>
-                      <td style={{ fontWeight: 600 }}>{formatCurrency(item.sellingPrice)}</td>
+                      <td>{formatVariantPriceRange(item.variants, 'purchasePrice')}</td>
+                      <td style={{ fontWeight: 600 }}>{formatVariantPriceRange(item.variants, 'sellingPrice')}</td>
                       <td>
                         <div className="action-buttons">
                           <button className="action-btn" onClick={() => openEdit(item)} title="Edit">
@@ -383,8 +412,8 @@ export default function Inventory() {
                 </div>
                 <div className="inv-card-footer">
                   <div className="inv-card-prices">
-                    <span>Cost: <span className="inv-card-price-tag">{formatCurrency(item.purchasePrice)}</span></span>
-                    <span>Sell: <span className="inv-card-price-tag">{formatCurrency(item.sellingPrice)}</span></span>
+                    <span>Cost: <span className="inv-card-price-tag">{formatVariantPriceRange(item.variants, 'purchasePrice')}</span></span>
+                    <span>Sell: <span className="inv-card-price-tag">{formatVariantPriceRange(item.variants, 'sellingPrice')}</span></span>
                   </div>
                   <button className="inv-card-edit-btn" onClick={(e) => { e.stopPropagation(); openEdit(item); }} title="Edit">
                     <span className="material-symbols-outlined">edit_note</span>
@@ -482,6 +511,24 @@ export default function Inventory() {
                             {rem}
                           </div>
                         </div>
+                        <div className="drawer-field" style={{ flex: '1 1 140px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Purchase Price (₹)</label>
+                          <input type="number" min="0" className="form-input drawer-input" value={v.purchasePrice}
+                            onChange={(e) => {
+                              const newV = [...editData.variants];
+                              newV[idx].purchasePrice = e.target.value;
+                              handleEditChange('variants', newV);
+                            }} required />
+                        </div>
+                        <div className="drawer-field" style={{ flex: '1 1 140px' }}>
+                          <label className="form-label" style={{fontSize:12}}>Selling Price (₹)</label>
+                          <input type="number" min="0" className="form-input drawer-input" value={v.sellingPrice}
+                            onChange={(e) => {
+                              const newV = [...editData.variants];
+                              newV[idx].sellingPrice = e.target.value;
+                              handleEditChange('variants', newV);
+                            }} required />
+                        </div>
                         {idx > 0 && (
                           <button type="button" className="action-btn action-btn-delete" onClick={() => {
                             const newV = editData.variants.filter((_, i) => i !== idx);
@@ -494,7 +541,10 @@ export default function Inventory() {
                     );
                   })}
                   <button type="button" className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => {
-                    handleEditChange('variants', [...editData.variants, { color: '', material: '', quantity: '', quantitySold: 0 }]);
+                    handleEditChange('variants', [...editData.variants, {
+                      color: '', material: '', quantity: '', quantitySold: 0,
+                      purchasePrice: '', sellingPrice: '',
+                    }]);
                   }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span> Add Variant
                   </button>
@@ -560,18 +610,8 @@ export default function Inventory() {
                 </div>
               </section>
               <section className="drawer-section">
-                <h4 className="drawer-section-title">Pricing</h4>
+                <h4 className="drawer-section-title">Notes</h4>
                 <div className="drawer-fields">
-                  <div className="drawer-field">
-                    <label className="form-label" style={{fontSize:12}}>Purchase Price (₹)</label>
-                    <input type="number" min="0" className="form-input drawer-input" value={editData.purchasePrice}
-                      onChange={(e) => handleEditChange('purchasePrice', e.target.value)} />
-                  </div>
-                  <div className="drawer-field">
-                    <label className="form-label" style={{fontSize:12}}>Selling Price (₹)</label>
-                    <input type="number" min="0" className="form-input drawer-input" value={editData.sellingPrice}
-                      onChange={(e) => handleEditChange('sellingPrice', e.target.value)} />
-                  </div>
                   <div className="drawer-field" style={{gridColumn:'1/-1'}}>
                     <label className="form-label" style={{fontSize:12}}>Remarks</label>
                     <textarea className="form-textarea drawer-input" rows={2} value={editData.remarks}

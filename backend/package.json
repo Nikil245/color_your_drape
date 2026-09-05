@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "seed": "node src/scripts/seedAdmin.js"
+    "seed": "node src/scripts/seedAdmin.js",
+    "test": "node --test src/**/*.test.js"
   },
   "keywords": [],
   "author": "",

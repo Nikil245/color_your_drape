@@ -127,6 +127,8 @@ export default function OrderForm() {
               variantQuantity: vQty,
               variantQuantitySold: vSold,
               variantQuantityRemaining: vRemaining,
+              purchasePrice: v.purchasePrice ?? i.purchasePrice,
+              sellingPrice: v.sellingPrice ?? i.sellingPrice,
             });
           }
         });

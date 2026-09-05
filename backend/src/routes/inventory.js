@@ -1,7 +1,8 @@
 const express = require('express');
-const { db } = require('../config/firebase');
+const { admin, db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
 const { validateInventory } = require('../middleware/validate');
+const { normalizeInventoryVariants } = require('../utils/inventoryVariants');
 
 const router = express.Router();
 
@@ -36,7 +37,7 @@ function deriveStatus(remaining, threshold) {
 router.post('/', validateInventory, async (req, res) => {
   try {
     const {
-      stockReceivedDate, brandName, variants, purchasePrice, sellingPrice,
+      stockReceivedDate, brandName, variants,
       supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
@@ -48,6 +49,8 @@ router.post('/', validateInventory, async (req, res) => {
         quantity: q,
         quantitySold: 0,
         quantityRemaining: q,
+        purchasePrice: Number(v.purchasePrice),
+        sellingPrice: Number(v.sellingPrice),
       };
     });
 
@@ -64,8 +67,6 @@ router.post('/', validateInventory, async (req, res) => {
       quantitySold: qtySold,
       quantityRemaining: qtyRemaining,
       status: deriveStatus(qtyRemaining, threshold),
-      purchasePrice: Number(purchasePrice),
-      sellingPrice: Number(sellingPrice),
       supplierName,
       supplierPhone: supplierPhone || '',
       supplierAddress: supplierAddress || '',
@@ -100,33 +101,7 @@ router.get('/', async (req, res) => {
     snapshot.forEach((doc) => {
       const data = doc.data();
 
-      // Normalize variants with per-variant quantitySold / quantityRemaining
-      let variants = data.variants;
-      if (Array.isArray(variants) && variants.length > 0) {
-        variants = variants.map((v) => {
-          const q = Number(v.quantity || 0);
-          const s = Number(v.quantitySold || 0);
-          return {
-            ...v,
-            quantity: q,
-            quantitySold: s,
-            quantityRemaining: q - s,
-          };
-        });
-      } else {
-        // Fallback for legacy single-item records
-        const q = Number(data.totalQuantity ?? data.quantityReceived ?? 0);
-        const s = Number(data.quantitySold || 0);
-        variants = [
-          {
-            color: data.sareeColor || 'Default',
-            material: data.materialType || 'Default',
-            quantity: q,
-            quantitySold: s,
-            quantityRemaining: q - s,
-          },
-        ];
-      }
+      const variants = normalizeInventoryVariants(data);
 
       const totalQuantity = variants.reduce((sum, v) => sum + v.quantity, 0);
       const totalSold = variants.reduce((sum, v) => sum + v.quantitySold, 0);
@@ -201,7 +176,6 @@ router.put('/:id', validateInventory, async (req, res) => {
 
     const {
       stockReceivedDate, brandName, variants,
-      purchasePrice, sellingPrice,
       supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
@@ -247,6 +221,8 @@ router.put('/:id', validateInventory, async (req, res) => {
           quantity: vQty,
           quantitySold: vSold,
           quantityRemaining: vQty - vSold,
+          purchasePrice: Number(v.purchasePrice),
+          sellingPrice: Number(v.sellingPrice),
         });
       }
 
@@ -262,8 +238,6 @@ router.put('/:id', validateInventory, async (req, res) => {
         quantitySold: totalSold,
         quantityRemaining: qtyRemaining,
         status: deriveStatus(qtyRemaining, threshold),
-        purchasePrice: Number(purchasePrice),
-        sellingPrice: Number(sellingPrice),
         supplierName,
         supplierPhone: supplierPhone || '',
         supplierAddress: supplierAddress || '',
@@ -271,8 +245,16 @@ router.put('/:id', validateInventory, async (req, res) => {
         updatedAt: new Date().toISOString(),
       };
 
-      t.update(docRef, updateData);
-      updatedItem = { id, ...existingData, ...updateData };
+      t.update(docRef, {
+        ...updateData,
+        purchasePrice: admin.firestore.FieldValue.delete(),
+        sellingPrice: admin.firestore.FieldValue.delete(),
+      });
+
+      const existingWithoutLegacyPrices = { ...existingData };
+      delete existingWithoutLegacyPrices.purchasePrice;
+      delete existingWithoutLegacyPrices.sellingPrice;
+      updatedItem = { id, ...existingWithoutLegacyPrices, ...updateData };
     });
 
     return res.json({

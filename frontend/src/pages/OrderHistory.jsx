@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ordersAPI } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -51,7 +51,7 @@ export default function OrderHistory() {
     const effectiveFilters = activeFilters?.target ? filters : activeFilters;
     setLoading(true);
     try {
-      const params = { search };
+      const params = {};
       if (effectiveFilters.status) params.status = effectiveFilters.status;
       if (effectiveFilters.payment) params.payment = effectiveFilters.payment;
       if (effectiveFilters.platform) params.platform = effectiveFilters.platform;
@@ -66,15 +66,28 @@ export default function OrderHistory() {
   };
 
   const openEdit = (o) => {
+    const items = Array.isArray(o.items) && o.items.length > 0
+      ? o.items
+      : [{
+          lineItemId: o.lineItemId,
+          sareeBrand: o.sareeBrand,
+          materialType: o.materialType || '',
+          sareeColor: o.sareeColor || '',
+          inventoryItemId: o.inventoryItemId || '',
+          quantity: o.quantity,
+          itemPrice: o.itemPrice,
+          costPrice: o.costPrice,
+          discount: o.discount || 0,
+          paymentStatus: o.paymentStatus,
+        }];
+
     setEditDrawer(o);
     setEditData({
       customerName: o.customerName, phone: o.phone, address: o.address,
       platform: o.platform, customerStatus: o.customerStatus || 'New',
-      sareeBrand: o.sareeBrand, materialType: o.materialType || '',
-      sareeColor: o.sareeColor || '', inventoryItemId: o.inventoryItemId || '',
       orderPlacedDate: o.orderPlacedDate || '',
-      quantity: o.quantity, itemPrice: o.itemPrice, costPrice: o.costPrice,
-      discount: o.discount || 0, paymentStatus: o.paymentStatus,
+      items: items.map((item) => ({ ...item })),
+      paymentStatus: o.paymentStatus,
       paymentMode: o.paymentMode, itemStatus: o.itemStatus,
       inventoryStatus: o.inventoryStatus || 'Reserved',
       expectedDeliveryDate: o.expectedDeliveryDate || '',
@@ -82,12 +95,29 @@ export default function OrderHistory() {
     });
   };
 
-  const handleEditChange = (f, v) => setEditData((p) => ({ ...p, [f]: v }));
+  const handleEditChange = (f, v) => setEditData((p) => ({
+    ...p,
+    [f]: v,
+    ...(f === 'paymentStatus'
+      ? { items: p.items.map((item) => ({ ...item, paymentStatus: v })) }
+      : {}),
+  }));
 
-  const calcTotal = (d) => {
-    const q = Number(d.quantity) || 0, p = Number(d.itemPrice) || 0, disc = Number(d.discount) || 0;
+  const handleEditItemChange = (index, field, value) => setEditData((previous) => ({
+    ...previous,
+    items: previous.items.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, [field]: value } : item
+    ),
+  }));
+
+  const calcItemTotal = (item) => {
+    const q = Number(item.quantity) || 0;
+    const p = Number(item.itemPrice) || 0;
+    const disc = Number(item.discount) || 0;
     return p * q - disc;
   };
+
+  const calcTotal = (items) => items.reduce((sum, item) => sum + calcItemTotal(item), 0);
 
   const saveEdit = async () => {
     if (!editDrawer) return;
@@ -98,9 +128,18 @@ export default function OrderHistory() {
       setEditDrawer(null);
       fetchOrders();
     } catch (err) {
-      addToast(err.response?.data?.errors?.[0]?.msg || 'Failed to update', 'error');
+      addToast(err.response?.data?.errors?.[0]?.msg || err.response?.data?.error || 'Failed to update', 'error');
     } finally { setSaving(false); }
   };
+
+  const filteredOrders = useMemo(() => {
+    const query = search.trim().replace(/^#/, '').toLowerCase();
+    if (!query) return orders;
+    return orders.filter((order) =>
+      order.customerName?.toLowerCase().includes(query) ||
+      order.orderId?.toLowerCase().includes(query)
+    );
+  }, [orders, search]);
 
   const deleteOrder = async (id) => {
     if (!window.confirm('Delete this order?')) return;
@@ -115,8 +154,7 @@ export default function OrderHistory() {
         <div className="search-wrap">
           <span className="material-symbols-outlined search-icon">search</span>
           <input className="search-input" placeholder="Search by customer name or Order ID"
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchOrders()} />
+            value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className="filter-selects">
           <select className="filter-select" value={filters.status}
@@ -150,10 +188,10 @@ export default function OrderHistory() {
 
       {loading ? (
         <div className="empty-state"><div className="spinner" /></div>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <div className="empty-state">
           <span className="material-symbols-outlined">receipt_long</span>
-          <p>No orders found.</p>
+          <p>{search ? 'No orders match your search.' : 'No orders found.'}</p>
         </div>
       ) : (
         <>
@@ -168,7 +206,7 @@ export default function OrderHistory() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {filteredOrders.map((o) => (
                   <tr key={o.id}>
                     <td className="order-id-cell">#{o.orderId}</td>
                     <td>{o.customerName}</td>
@@ -198,7 +236,7 @@ export default function OrderHistory() {
 
         {/* Mobile Cards */}
         <div className="history-mobile-cards">
-          {orders.map((o) => (
+          {filteredOrders.map((o) => (
             <div key={o.id} className="mobile-order-card glass-card" onClick={() => openEdit(o)}>
               <div className="mobile-card-header">
                 <span className="mobile-card-order-id">#{o.orderId}</span>
@@ -283,26 +321,42 @@ export default function OrderHistory() {
                 </div>
               </section>
               <section className="drawer-section">
-                <h4 className="drawer-section-title">Item Details</h4>
+                <h4 className="drawer-section-title">Item Details ({editData.items.length})</h4>
+                {editData.items.map((item, index) => (
+                  <div className="drawer-fields" key={item.lineItemId || index} style={{ marginBottom: 16 }}>
+                    <div className="drawer-field" style={{gridColumn:'1/-1'}}>
+                      <label className="form-label" style={{fontSize:12}}>Saree {index + 1} — Brand</label>
+                      <input className="form-input drawer-input" value={item.sareeBrand}
+                        onChange={(e) => handleEditItemChange(index, 'sareeBrand', e.target.value)} />
+                    </div>
+                    <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Material</label>
+                      <input className="form-input drawer-input" value={item.materialType}
+                        onChange={(e) => handleEditItemChange(index, 'materialType', e.target.value)} /></div>
+                    <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Color</label>
+                      <input className="form-input drawer-input" value={item.sareeColor}
+                        onChange={(e) => handleEditItemChange(index, 'sareeColor', e.target.value)} /></div>
+                    <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Quantity</label>
+                      <input type="number" min="1" className="form-input drawer-input" value={item.quantity}
+                        onChange={(e) => handleEditItemChange(index, 'quantity', e.target.value)} /></div>
+                    <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Unit Price (₹)</label>
+                      <input type="number" min="0" className="form-input drawer-input" value={item.itemPrice}
+                        onChange={(e) => handleEditItemChange(index, 'itemPrice', e.target.value)} /></div>
+                    <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Cost Price (₹)</label>
+                      <input type="number" min="0" className="form-input drawer-input" value={item.costPrice}
+                        onChange={(e) => handleEditItemChange(index, 'costPrice', e.target.value)} /></div>
+                    <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Discount (₹)</label>
+                      <input type="number" min="0" className="form-input drawer-input" value={item.discount}
+                        onChange={(e) => handleEditItemChange(index, 'discount', e.target.value)} /></div>
+                    <div className="drawer-field" style={{gridColumn:'1/-1'}}>
+                      <label className="form-label" style={{fontSize:12}}>Line Total</label>
+                      <div className="total-display">{formatCurrency(calcItemTotal(item))}</div>
+                    </div>
+                  </div>
+                ))}
                 <div className="drawer-fields">
-                  <div className="drawer-field" style={{gridColumn:'1/-1'}}><label className="form-label" style={{fontSize:12}}>Saree Brand</label>
-                    <input className="form-input drawer-input" value={editData.sareeBrand}
-                      onChange={(e) => handleEditChange('sareeBrand', e.target.value)} /></div>
-                  <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Quantity</label>
-                    <input type="number" className="form-input drawer-input" value={editData.quantity}
-                      onChange={(e) => handleEditChange('quantity', e.target.value)} /></div>
-                  <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Unit Price (₹)</label>
-                    <input type="number" className="form-input drawer-input" value={editData.itemPrice}
-                      onChange={(e) => handleEditChange('itemPrice', e.target.value)} /></div>
-                  <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Cost Price (₹)</label>
-                    <input type="number" className="form-input drawer-input" value={editData.costPrice}
-                      onChange={(e) => handleEditChange('costPrice', e.target.value)} /></div>
-                  <div className="drawer-field"><label className="form-label" style={{fontSize:12}}>Discount (₹)</label>
-                    <input type="number" className="form-input drawer-input" value={editData.discount}
-                      onChange={(e) => handleEditChange('discount', e.target.value)} /></div>
                   <div className="drawer-field" style={{gridColumn:'1/-1'}}>
-                    <label className="form-label" style={{fontSize:12}}>Total Amount</label>
-                    <div className="total-display">{formatCurrency(calcTotal(editData))}</div>
+                    <label className="form-label" style={{fontSize:12}}>Order Total</label>
+                    <div className="total-display">{formatCurrency(calcTotal(editData.items))}</div>
                   </div>
                   <div className="drawer-field" style={{gridColumn:'1/-1'}}><label className="form-label" style={{fontSize:12}}>Notes</label>
                     <textarea className="form-textarea drawer-input" rows={2} value={editData.notes}

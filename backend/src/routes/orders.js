@@ -11,102 +11,12 @@ const {
   getLinkedInventoryIds,
   matchesOrderPaymentFilter,
 } = require('../utils/orderItems');
+const { updateVariantStock } = require('../utils/inventoryVariants');
 
 const router = express.Router();
 
 // All order routes require authentication
 router.use(authMiddleware);
-
-/**
- * Derive inventory status from quantityRemaining.
- * Uses the same thresholds as the Inventory module.
- */
-function deriveStatus(remaining) {
-  if (remaining <= 0) return 'Out of Stock';
-  if (remaining <= 5) return 'Low Stock';
-  return 'In Stock';
-}
-
-/**
- * Deduct or restore stock on a specific variant inside an inventory item.
- */
-function updateVariantStock(invData, targetColor, targetMaterial, qtyDelta, action = 'deduct') {
-  let variants = invData.variants;
-  if (!Array.isArray(variants) || variants.length === 0) {
-    const totalQ = Number(invData.totalQuantity ?? invData.quantityReceived ?? 0);
-    const totalS = Number(invData.quantitySold || 0);
-    variants = [
-      {
-        color: invData.sareeColor || 'Default',
-        material: invData.materialType || 'Default',
-        quantity: totalQ,
-        quantitySold: totalS,
-        quantityRemaining: totalQ - totalS,
-      },
-    ];
-  } else {
-    variants = variants.map((v) => ({
-      color: v.color || '',
-      material: v.material || '',
-      quantity: Number(v.quantity || 0),
-      quantitySold: Number(v.quantitySold || 0),
-      quantityRemaining: Number(v.quantity || 0) - Number(v.quantitySold || 0),
-    }));
-  }
-
-  const normColor = (targetColor || '').trim().toLowerCase();
-  const normMat = (targetMaterial || '').trim().toLowerCase();
-
-  // Find variant by color & material match
-  let variantIndex = variants.findIndex(
-    (v) =>
-      v.color.trim().toLowerCase() === normColor &&
-      (normMat === '' || v.material.trim().toLowerCase() === normMat)
-  );
-
-  // Fallback match by color only
-  if (variantIndex === -1 && normColor) {
-    variantIndex = variants.findIndex((v) => v.color.trim().toLowerCase() === normColor);
-  }
-
-  // Fallback to first variant if none matched
-  if (variantIndex === -1) {
-    variantIndex = 0;
-  }
-
-  const targetV = variants[variantIndex];
-  const vQty = Number(targetV.quantity || 0);
-  const currentVSold = Number(targetV.quantitySold || 0);
-  const vRemaining = vQty - currentVSold;
-
-  let newVSold;
-  if (action === 'deduct') {
-    if (qtyDelta > vRemaining) {
-      const desc = targetV.color ? `${targetV.material || ''} - ${targetV.color}`.trim() : 'this variant';
-      throw new Error(
-        `Only ${vRemaining} units of ${invData.brandName || 'this item'} (${desc}) remaining in stock`
-      );
-    }
-    newVSold = currentVSold + qtyDelta;
-  } else {
-    newVSold = Math.max(0, currentVSold - qtyDelta);
-  }
-
-  targetV.quantitySold = newVSold;
-  targetV.quantityRemaining = vQty - newVSold;
-
-  const docTotalQuantity = variants.reduce((sum, v) => sum + Number(v.quantity), 0);
-  const docTotalSold = variants.reduce((sum, v) => sum + Number(v.quantitySold), 0);
-  const docTotalRemaining = docTotalQuantity - docTotalSold;
-
-  return {
-    updatedVariants: variants,
-    totalQuantity: docTotalQuantity,
-    quantitySold: docTotalSold,
-    quantityRemaining: docTotalRemaining,
-    status: deriveStatus(docTotalRemaining),
-  };
-}
 
 function applyInventoryMovement(inventoryStates, item, action, options = {}) {
   const invId = item.inventoryItemId || '';

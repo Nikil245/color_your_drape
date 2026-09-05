@@ -141,6 +141,22 @@
   color: var(--color-primary); letter-spacing: 0.02em;
 }
 .cust-detail-order-body { padding: 10px 14px; }
+.cust-detail-order-item {
+  padding: 4px 0 8px;
+}
+.cust-detail-order-item + .cust-detail-order-item {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-outline-variant);
+}
+.cust-detail-order-item-title {
+  margin-bottom: 4px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 .cust-detail-order-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 5px 0; font-size: 13px; color: var(--color-on-surface);
