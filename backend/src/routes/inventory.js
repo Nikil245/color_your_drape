@@ -231,7 +231,9 @@ router.put('/:id', validateInventory, async (req, res) => {
       const qtyRemaining = totalQuantity - totalSold;
 
       const updateData = {
-        stockReceivedDate: stockReceivedDate || '',
+        // Preserve the existing date when an edit does not include one. The
+        // admin can explicitly submit a new date when recording a restock.
+        stockReceivedDate: stockReceivedDate || existingData.stockReceivedDate || '',
         brandName: brandName.trim(),
         variants: updatedVariants,
         totalQuantity,

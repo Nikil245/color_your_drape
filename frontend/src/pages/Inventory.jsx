@@ -37,6 +37,21 @@ const createEmptyVariant = () => ({
   color: '', material: '', quantity: '', purchasePrice: '', sellingPrice: '',
 });
 
+// Inventory created before per-variant pricing may only have prices on the
+// parent record. Always make edit inputs controlled, valid numeric values so
+// an unrelated edit cannot submit a blank price for one of those variants.
+const editPrice = (variantPrice, legacyPrice) => {
+  const isValidPrice = (value) => {
+    if (value === null || value === undefined || value === '') return false;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0;
+  };
+
+  if (isValidPrice(variantPrice)) return Number(variantPrice);
+  if (isValidPrice(legacyPrice)) return Number(legacyPrice);
+  return 0;
+};
+
 const createEmptyForm = () => ({
   stockReceivedDate: new Date().toISOString().split('T')[0],
   brandName: '',
@@ -102,7 +117,9 @@ export default function Inventory() {
   const openEdit = (item) => {
     setEditDrawer(item);
     setEditData({
-      stockReceivedDate: item.stockReceivedDate || '',
+      // Keep the existing date for ordinary edits. Legacy items without a
+      // date get today's date so a restock can be recorded from this drawer.
+      stockReceivedDate: item.stockReceivedDate || new Date().toISOString().split('T')[0],
       brandName: item.brandName,
       variants: item.variants && item.variants.length > 0
         ? item.variants.map((v) => ({
@@ -110,16 +127,16 @@ export default function Inventory() {
             material: v.material || '',
             quantity: v.quantity || 0,
             quantitySold: v.quantitySold || 0,
-            purchasePrice: v.purchasePrice ?? item.purchasePrice ?? '',
-            sellingPrice: v.sellingPrice ?? item.sellingPrice ?? '',
+            purchasePrice: editPrice(v.purchasePrice, item.purchasePrice),
+            sellingPrice: editPrice(v.sellingPrice, item.sellingPrice),
           }))
         : [{
             color: item.sareeColor || '',
             material: item.materialType || '',
             quantity: item.quantityReceived || 0,
             quantitySold: item.quantitySold || 0,
-            purchasePrice: item.purchasePrice ?? '',
-            sellingPrice: item.sellingPrice ?? '',
+            purchasePrice: editPrice(undefined, item.purchasePrice),
+            sellingPrice: editPrice(undefined, item.sellingPrice),
           }],
       supplierName: item.supplierName,
       supplierPhone: item.supplierPhone || '',

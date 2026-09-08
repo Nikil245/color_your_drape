@@ -3,13 +3,19 @@ function numericValue(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function nonNegativePrice(value, fallback = 0) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 /**
  * Return a consistent variant array for both current and legacy inventory records.
  * Legacy document-level prices are exposed as defaults without requiring a backfill.
  */
 function normalizeInventoryVariants(inventory = {}) {
-  const legacyPurchasePrice = numericValue(inventory.purchasePrice);
-  const legacySellingPrice = numericValue(inventory.sellingPrice);
+  const legacyPurchasePrice = nonNegativePrice(inventory.purchasePrice);
+  const legacySellingPrice = nonNegativePrice(inventory.sellingPrice);
 
   if (Array.isArray(inventory.variants) && inventory.variants.length > 0) {
     return inventory.variants.map((variant) => {
@@ -23,8 +29,8 @@ function normalizeInventoryVariants(inventory = {}) {
         quantity,
         quantitySold,
         quantityRemaining: quantity - quantitySold,
-        purchasePrice: numericValue(variant.purchasePrice ?? inventory.purchasePrice, legacyPurchasePrice),
-        sellingPrice: numericValue(variant.sellingPrice ?? inventory.sellingPrice, legacySellingPrice),
+        purchasePrice: nonNegativePrice(variant.purchasePrice, legacyPurchasePrice),
+        sellingPrice: nonNegativePrice(variant.sellingPrice, legacySellingPrice),
       };
     });
   }

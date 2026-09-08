@@ -21,6 +21,25 @@ test('normalizes old variant records with document-level price defaults', () => 
   );
 });
 
+test('uses a valid legacy price when a variant price is blank, malformed, or negative', () => {
+  const variants = normalizeInventoryVariants({
+    purchasePrice: 695,
+    sellingPrice: 1099,
+    variants: [
+      { color: 'Blank', material: 'Silk', quantity: 1, purchasePrice: '', sellingPrice: null },
+      { color: 'Malformed', material: 'Silk', quantity: 1, purchasePrice: 'not a price', sellingPrice: -1 },
+    ],
+  });
+
+  assert.deepEqual(
+    variants.map(({ purchasePrice, sellingPrice }) => ({ purchasePrice, sellingPrice })),
+    [
+      { purchasePrice: 695, sellingPrice: 1099 },
+      { purchasePrice: 695, sellingPrice: 1099 },
+    ]
+  );
+});
+
 test('normalizes legacy single-item inventory into a priced variant', () => {
   const [variant] = normalizeInventoryVariants({
     sareeColor: 'Green',
