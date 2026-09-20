@@ -150,6 +150,13 @@
   justify-content: center;
 }
 
+.kpi-secondary-stat {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-on-surface-variant);
+}
+
 /* ─── Charts Grid ─── */
 .charts-grid {
   display: grid;

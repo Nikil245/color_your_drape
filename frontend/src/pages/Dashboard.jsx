@@ -14,7 +14,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement
 const kpiConfig = [
   { key: 'totalSales', label: 'Total Sales', icon: 'payments', prefix: '₹', borderColor: 'var(--color-primary-container)' },
   { key: 'totalProfit', label: 'Total Profit', icon: 'account_balance_wallet', prefix: '₹', borderColor: 'var(--color-secondary-container)' },
-  { key: 'totalOrders', label: 'Total Orders', icon: 'shopping_bag', prefix: '', borderColor: 'var(--color-tertiary-container)' },
+  { key: 'totalOrders', label: 'Total Orders', icon: 'shopping_bag', prefix: '', borderColor: 'var(--color-tertiary-container)', secondaryKey: 'totalSareesSold', secondarySuffix: 'sarees sold' },
   { key: 'avgOrderValue', label: 'Avg Order Value', icon: 'receipt_long', prefix: '₹', borderColor: 'var(--color-outline)' },
   { key: 'pendingDeliveries', label: 'Pending Deliveries', icon: 'local_shipping', prefix: '', borderColor: 'var(--color-error)', clickable: true, linkTo: '/orders?tab=history&status=PendingDelivery' },
   { key: 'paymentPending', label: 'Payment Pending', icon: 'pending_actions', prefix: '', borderColor: '#D9782D', clickable: true, linkTo: '/orders?tab=history&payment=PaymentPending' },
@@ -247,6 +247,11 @@ export default function Dashboard() {
               <h2 className="text-headline-sm" style={{ color: 'var(--color-on-background)' }}>
                 {kpi.prefix ? formatCurrency(kpis[kpi.key]) : kpis[kpi.key]}
               </h2>
+              {kpi.secondaryKey && (
+                <p className="kpi-secondary-stat">
+                  {kpis[kpi.secondaryKey]} {kpi.secondarySuffix}
+                </p>
+              )}
             </div>
           );
         })}

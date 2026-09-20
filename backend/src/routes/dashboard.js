@@ -144,6 +144,13 @@ router.get('/summary', async (req, res) => {
 
     // KPIs reflecting ALL orders regardless of payment status
     const totalOrders = filteredOrders.length;
+    const totalSareesSold = filteredOrders.reduce(
+      (orderTotal, order) => orderTotal + (order.items || []).reduce(
+        (itemTotal, item) => itemTotal + quantity(item.quantity),
+        0
+      ),
+      0
+    );
     const totalGrossValue = filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
     const avgOrderValue = totalOrders > 0 ? Math.round(totalGrossValue / totalOrders) : 0;
 
@@ -308,7 +315,7 @@ router.get('/summary', async (req, res) => {
     return res.json({
       selectedPeriod: periodParam,
       availableMonths,
-      kpis: { totalSales, totalProfit, totalOrders, avgOrderValue, pendingDeliveries, paymentPending, lowStockItems },
+      kpis: { totalSales, totalProfit, totalOrders, totalSareesSold, avgOrderValue, pendingDeliveries, paymentPending, lowStockItems },
       charts: { salesTrend, ordersByPlatform, topBrands, ordersByCity },
       recentOrders,
     });
