@@ -237,6 +237,7 @@ export default function Settings() {
             </div>
           </div>
 
+          {!user?.isDemo && <>
           <hr className="settings-divider" />
 
           {/* Name — editable */}
@@ -265,13 +266,15 @@ export default function Settings() {
               <InlineMsg msg={nameMsg} />
             </div>
           </form>
+          </>}
+          {user?.isDemo && <p className="settings-section-subtitle">Account details are read-only in Demo mode.</p>}
         </div>
       </section>
 
       {/* ══════════════════════════════════
           SECTION 2 — Change Password
           ══════════════════════════════════ */}
-      <section className="settings-section" aria-labelledby="password-heading">
+      {!user?.isDemo && <section className="settings-section" aria-labelledby="password-heading">
         <div className="settings-section-header">
           <div className="settings-section-icon">
             <span className="material-symbols-outlined">lock</span>
@@ -323,7 +326,7 @@ export default function Settings() {
             </div>
           </form>
         </div>
-      </section>
+      </section>}
 
       {/* ══════════════════════════════════
           SECTION 3 — Business Info

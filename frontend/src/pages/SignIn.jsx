@@ -9,7 +9,7 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -21,6 +21,19 @@ export default function SignIn() {
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await demoLogin();
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Demo login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -120,6 +133,13 @@ export default function SignIn() {
               </button>
             </div>
           </form>
+
+          <div className="signin-demo">
+            <button type="button" className="btn-secondary signin-submit" onClick={handleDemoLogin} disabled={loading}>
+              {loading ? 'Starting demo…' : 'Try Demo'}
+            </button>
+            <p>Explore with isolated sample data.</p>
+          </div>
         </div>
 
         {/* Trust Indicator */}

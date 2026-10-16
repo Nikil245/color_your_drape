@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('../config/firebase');
+const { collectionFor } = require('../utils/scopedFirestore');
 const authMiddleware = require('../middleware/auth');
 const { normalizeOrderForResponse } = require('../utils/orderItems');
 
@@ -29,7 +29,7 @@ function customerKey(order) {
 router.get('/', async (req, res) => {
   try {
     const { search, month } = req.query;
-    const snapshot = await db.collection('orders').get();
+    const snapshot = await collectionFor(req, 'orders').get();
     const customerMap = {};
     const monthSet = new Set();
 
@@ -125,7 +125,7 @@ router.get('/', async (req, res) => {
 router.get('/:key', async (req, res) => {
   try {
     const requestedKey = decodeURIComponent(req.params.key);
-    const snapshot = await db.collection('orders').get();
+    const snapshot = await collectionFor(req, 'orders').get();
     const orders = [];
     let customer = null;
 

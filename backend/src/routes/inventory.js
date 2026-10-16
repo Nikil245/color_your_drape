@@ -1,5 +1,6 @@
 const express = require('express');
-const { admin, db } = require('../config/firebase');
+const { admin } = require('../config/firebase');
+const { collectionFor, runTransaction } = require('../utils/scopedFirestore');
 const authMiddleware = require('../middleware/auth');
 const { validateInventory } = require('../middleware/validate');
 const { normalizeInventoryVariants } = require('../utils/inventoryVariants');
@@ -12,13 +13,11 @@ router.use(authMiddleware);
 /**
  * Fetch the low-stock threshold from settings. Falls back to 5.
  */
-async function getLowStockThreshold() {
-  try {
-    const doc = await db.collection('settings').doc('business').get();
-    if (doc.exists && typeof doc.data().lowStockThreshold === 'number') {
-      return doc.data().lowStockThreshold;
-    }
-  } catch (_) { /* ignore, use default */ }
+async function getLowStockThreshold(req) {
+  const doc = await collectionFor(req, 'settings').doc('business').get();
+  if (doc.exists && typeof doc.data().lowStockThreshold === 'number') {
+    return doc.data().lowStockThreshold;
+  }
   return 5;
 }
 
@@ -57,7 +56,7 @@ router.post('/', validateInventory, async (req, res) => {
     const totalQuantity = processedVariants.reduce((sum, v) => sum + v.quantity, 0);
     const qtySold = 0;
     const qtyRemaining = totalQuantity - qtySold;
-    const threshold = await getLowStockThreshold();
+    const threshold = await getLowStockThreshold(req);
 
     const inventoryData = {
       stockReceivedDate: stockReceivedDate || new Date().toISOString().split('T')[0],
@@ -75,7 +74,7 @@ router.post('/', validateInventory, async (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
-    const docRef = await db.collection('inventory').add(inventoryData);
+    const docRef = await collectionFor(req, 'inventory').add(inventoryData);
 
     return res.status(201).json({
       message: 'Inventory item created successfully.',
@@ -95,7 +94,7 @@ router.get('/', async (req, res) => {
   try {
     const { status, brand, search } = req.query;
 
-    const snapshot = await db.collection('inventory').orderBy('createdAt', 'desc').get();
+    const snapshot = await collectionFor(req, 'inventory').orderBy('createdAt', 'desc').get();
     let items = [];
 
     snapshot.forEach((doc) => {
@@ -148,7 +147,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/brands', async (req, res) => {
   try {
-    const snapshot = await db.collection('inventory').get();
+    const snapshot = await collectionFor(req, 'inventory').get();
     const brands = new Set();
     snapshot.forEach((doc) => {
       const data = doc.data();
@@ -167,7 +166,7 @@ router.get('/brands', async (req, res) => {
 router.put('/:id', validateInventory, async (req, res) => {
   try {
     const { id } = req.params;
-    const docRef = db.collection('inventory').doc(id);
+    const docRef = collectionFor(req, 'inventory').doc(id);
 
     const existenceCheck = await docRef.get();
     if (!existenceCheck.exists) {
@@ -179,10 +178,10 @@ router.put('/:id', validateInventory, async (req, res) => {
       supplierName, supplierPhone, supplierAddress, remarks,
     } = req.body;
 
-    const threshold = await getLowStockThreshold();
+    const threshold = await getLowStockThreshold(req);
 
     let updatedItem;
-    await db.runTransaction(async (t) => {
+    await runTransaction(req, async (t) => {
       const currentDoc = await t.get(docRef);
       if (!currentDoc.exists) {
         throw new Error('Inventory item not found.');
@@ -278,7 +277,7 @@ router.put('/:id', validateInventory, async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const docRef = db.collection('inventory').doc(id);
+    const docRef = collectionFor(req, 'inventory').doc(id);
     const doc = await docRef.get();
 
     if (!doc.exists) {

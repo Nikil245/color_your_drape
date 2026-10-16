@@ -22,6 +22,7 @@ api.interceptors.request.use(
 // ─── Auth ───
 export const authAPI = {
   login: (email, password) => api.post('/auth/login', { email, password }),
+  demoLogin: () => api.post('/auth/demo-login'),
   register: (name, email, password) => api.post('/auth/register', { name, email, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),

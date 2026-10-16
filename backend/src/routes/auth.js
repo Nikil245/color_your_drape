@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const { db } = require('../config/firebase');
+const { accountCollection } = require('../utils/scopedFirestore');
 const { validateLogin, validateRegister, validateUpdateProfile, validateChangePassword } = require('../middleware/validate');
 const authMiddleware = require('../middleware/auth');
 require('dotenv').config();
@@ -27,7 +27,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
     const { email, password } = req.body;
 
     // Look up user in Firestore
-    const usersRef = db.collection('users');
+    const usersRef = accountCollection('users');
     const snapshot = await usersRef.where('email', '==', email).limit(1).get();
 
     if (snapshot.empty) {
@@ -45,7 +45,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 
     // Create JWT
     const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, name: userData.name },
+      { uid: userDoc.id, email: userData.email, name: userData.name, isDemo: false, dataScope: 'real' },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -70,15 +70,62 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 });
 
 /**
+ * POST /api/auth/demo-login
+ * Issue a short-lived demo identity without credentials.
+ */
+router.post('/demo-login', async (req, res) => {
+  try {
+    const user = { uid: 'demo-user', email: 'demo@colouryourdrape.local', name: 'Demo User', isDemo: true, dataScope: 'demo' };
+    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '24h' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    return res.json({ message: 'Demo login successful', user, token });
+  } catch (err) {
+    console.error('Demo login error:', err);
+    return res.status(500).json({ error: 'Unable to start demo session.' });
+  }
+});
+
+function rejectDemoSession(req, res, next) {
+  let token = req.cookies?.token;
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.slice(7);
+  }
+  if (!token) return next();
+  try {
+    if (jwt.verify(token, process.env.JWT_SECRET).isDemo === true) {
+      return res.status(403).json({ error: 'Demo sessions cannot create accounts or team members.' });
+    }
+  } catch (_) {
+    // Registration remains public; invalid optional credentials do not grant access.
+  }
+  return next();
+}
+
+// Apply to account administration routes, including any future team-member routes.
+function requireRealSession(req, res, next) {
+  return authMiddleware(req, res, () => {
+    if (req.user.isDemo === true) {
+      return res.status(403).json({ error: 'Demo sessions cannot access account administration.' });
+    }
+    return next();
+  });
+}
+
+/**
  * POST /api/auth/register
  * Register a new admin user. Passwords hashed with bcrypt (saltRounds=10).
  */
-router.post('/register', validateRegister, async (req, res) => {
+router.post('/register', rejectDemoSession, validateRegister, async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
     // Check if user already exists
-    const usersRef = db.collection('users');
+    const usersRef = accountCollection('users');
     const snapshot = await usersRef.where('email', '==', email).limit(1).get();
 
     if (!snapshot.empty) {
@@ -136,7 +183,11 @@ router.get('/me', (req, res) => {
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return res.json({ user: { uid: decoded.uid, email: decoded.email, name: decoded.name } });
+    if ((decoded.dataScope !== 'real' && decoded.dataScope !== 'demo')
+      || decoded.isDemo !== (decoded.dataScope === 'demo')) {
+      return res.status(401).json({ error: 'Session scope is missing or invalid. Please sign in again.' });
+    }
+    return res.json({ user: { uid: decoded.uid, email: decoded.email, name: decoded.name, isDemo: decoded.isDemo === true } });
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token.' });
   }
@@ -146,16 +197,16 @@ router.get('/me', (req, res) => {
  * PUT /api/auth/profile
  * Update the authenticated user's name in Firestore and re-issue JWT.
  */
-router.put('/profile', authMiddleware, validateUpdateProfile, async (req, res) => {
+router.put('/profile', requireRealSession, validateUpdateProfile, async (req, res) => {
   try {
     const { name } = req.body;
     const uid = req.user.uid;
 
-    await db.collection('users').doc(uid).update({ name });
+    await accountCollection('users').doc(uid).update({ name });
 
     // Re-issue JWT with updated name so future /me calls are accurate
     const token = jwt.sign(
-      { uid, email: req.user.email, name },
+      { uid, email: req.user.email, name, isDemo: false, dataScope: 'real' },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -182,12 +233,12 @@ router.put('/profile', authMiddleware, validateUpdateProfile, async (req, res) =
  * POST /api/auth/change-password
  * Verify current password then hash and store the new one.
  */
-router.post('/change-password', authMiddleware, validateChangePassword, async (req, res) => {
+router.post('/change-password', requireRealSession, validateChangePassword, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const uid = req.user.uid;
 
-    const userDoc = await db.collection('users').doc(uid).get();
+    const userDoc = await accountCollection('users').doc(uid).get();
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -200,7 +251,7 @@ router.post('/change-password', authMiddleware, validateChangePassword, async (r
 
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(newPassword, saltRounds);
-    await db.collection('users').doc(uid).update({ passwordHash });
+    await accountCollection('users').doc(uid).update({ passwordHash });
 
     return res.json({ message: 'Password changed successfully.' });
   } catch (err) {

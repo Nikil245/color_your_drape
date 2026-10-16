@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { settingsAPI } from '../services/api';
+import { useAuth } from './AuthContext';
 
 const SettingsContext = createContext(null);
 
@@ -11,6 +12,7 @@ const DEFAULTS = {
 };
 
 export function SettingsProvider({ children }) {
+  const { user } = useAuth();
   const [settings, setSettings] = useState(DEFAULTS);
   const [settingsLoading, setSettingsLoading] = useState(true);
 
@@ -27,8 +29,9 @@ export function SettingsProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (user) fetchSettings();
+    else setSettings(DEFAULTS);
+  }, [fetchSettings, user?.uid]);
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings, settingsLoading, refetchSettings: fetchSettings }}>

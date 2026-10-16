@@ -1,14 +1,12 @@
 const express = require('express');
-const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
 const { validateBusinessSettings } = require('../middleware/validate');
+const { collectionFor } = require('../utils/scopedFirestore');
 
 const router = express.Router();
 
 // All settings routes require authentication
 router.use(authMiddleware);
-
-const SETTINGS_DOC = db.collection('settings').doc('business');
 
 /**
  * GET /api/settings/business
@@ -16,7 +14,7 @@ const SETTINGS_DOC = db.collection('settings').doc('business');
  */
 router.get('/business', async (req, res) => {
   try {
-    const doc = await SETTINGS_DOC.get();
+    const doc = await collectionFor(req, 'settings').doc('business').get();
 
     if (!doc.exists) {
       // Return safe defaults so the frontend always gets a consistent shape
@@ -53,7 +51,7 @@ router.put('/business', validateBusinessSettings, async (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
-    await SETTINGS_DOC.set(settingsData, { merge: true });
+    await collectionFor(req, 'settings').doc('business').set(settingsData, { merge: true });
 
     return res.json({
       message: 'Settings saved successfully.',

@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('../config/firebase');
+const { collectionFor } = require('../utils/scopedFirestore');
 const authMiddleware = require('../middleware/auth');
 const {
   normalizeOrderForResponse,
@@ -91,7 +91,7 @@ router.get('/summary', async (req, res) => {
     const periodParam = req.query.period || 'this_month';
     const { period, startDate, endDate, isDaily } = getPeriodDateRange(periodParam);
 
-    const snapshot = await db.collection('orders').get();
+    const snapshot = await collectionFor(req, 'orders').get();
     const allOrders = [];
     snapshot.forEach((doc) => allOrders.push(normalizeOrderForResponse({ id: doc.id, ...doc.data() })));
 
@@ -164,7 +164,7 @@ router.get('/summary', async (req, res) => {
       (o) => hasPendingOrPartialPayment(o.items || [])
     ).length;
 
-    const invSnapshot = await db.collection('inventory').get();
+    const invSnapshot = await collectionFor(req, 'inventory').get();
     let lowStockItems = 0;
     invSnapshot.forEach((doc) => {
       const item = doc.data();

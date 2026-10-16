@@ -30,6 +30,7 @@ export default function Layout() {
 
         {/* Page Content */}
         <main className="page-content">
+          {user?.isDemo && <div className="demo-session-banner" role="status">Demo session · changes stay in demo data</div>}
           <Outlet />
         </main>
       </div>

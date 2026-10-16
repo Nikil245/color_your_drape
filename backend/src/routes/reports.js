@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('../config/firebase');
+const { collectionFor } = require('../utils/scopedFirestore');
 const authMiddleware = require('../middleware/auth');
 const {
   normalizeOrderForResponse,
@@ -246,7 +246,7 @@ router.get('/summary', async (req, res) => {
       req.query.endDate
     );
 
-    const snapshot = await db.collection('orders').get();
+    const snapshot = await collectionFor(req, 'orders').get();
     const allOrders = [];
     snapshot.forEach((doc) => allOrders.push(normalizeOrderForResponse({ id: doc.id, ...doc.data() })));
 

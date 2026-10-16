@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('../config/firebase');
+const { collectionFor, runTransaction } = require('../utils/scopedFirestore');
 const authMiddleware = require('../middleware/auth');
 const { validateOrder } = require('../middleware/validate');
 const {
@@ -61,13 +61,13 @@ router.post('/', validateOrder, async (req, res) => {
   try {
     const items = buildSubmittedItems(req.body);
     const linkedInventoryIds = getLinkedInventoryIds(items);
-    const counterRef = db.collection('settings').doc('counters');
-    const orderDocRef = db.collection('orders').doc(); // pre-generate doc ref
+    const counterRef = collectionFor(req, 'settings').doc('counters');
+    const orderDocRef = collectionFor(req, 'orders').doc(); // pre-generate doc ref
 
-    const result = await db.runTransaction(async (t) => {
+    const result = await runTransaction(req, async (t) => {
       const inventoryStates = new Map();
       for (const invId of linkedInventoryIds) {
-        const invRef = db.collection('inventory').doc(invId);
+        const invRef = collectionFor(req, 'inventory').doc(invId);
         const invDoc = await t.get(invRef);
         inventoryStates.set(invId, {
           ref: invRef,
@@ -133,7 +133,7 @@ router.get('/', async (req, res) => {
   try {
     const { status, payment, platform, startDate, endDate, search, month } = req.query;
 
-    let query = db.collection('orders').orderBy('createdAt', 'desc');
+    let query = collectionFor(req, 'orders').orderBy('createdAt', 'desc');
 
     const snapshot = await query.get();
     let orders = [];
@@ -212,7 +212,7 @@ router.get('/', async (req, res) => {
 router.put('/:id', validateOrder, async (req, res) => {
   try {
     const { id } = req.params;
-    const orderRef = db.collection('orders').doc(id);
+    const orderRef = collectionFor(req, 'orders').doc(id);
     const orderDoc = await orderRef.get();
 
     if (!orderDoc.exists) {
@@ -226,10 +226,10 @@ router.put('/:id', validateOrder, async (req, res) => {
     const linkedInventoryIds = getLinkedInventoryIds([...oldItems, ...newItems]);
 
     if (linkedInventoryIds.length > 0) {
-      await db.runTransaction(async (t) => {
+      await runTransaction(req, async (t) => {
         const inventoryStates = new Map();
         for (const invId of linkedInventoryIds) {
-          const invRef = db.collection('inventory').doc(invId);
+          const invRef = collectionFor(req, 'inventory').doc(invId);
           const invDoc = await t.get(invRef);
           inventoryStates.set(invId, {
             ref: invRef,
@@ -287,7 +287,7 @@ router.put('/:id', validateOrder, async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const orderRef = db.collection('orders').doc(id);
+    const orderRef = collectionFor(req, 'orders').doc(id);
     const orderDoc = await orderRef.get();
 
     if (!orderDoc.exists) {
@@ -300,10 +300,10 @@ router.delete('/:id', async (req, res) => {
 
     if (linkedInventoryIds.length > 0) {
       // Restore stock in a transaction
-      await db.runTransaction(async (t) => {
+      await runTransaction(req, async (t) => {
         const inventoryStates = new Map();
         for (const invId of linkedInventoryIds) {
-          const invRef = db.collection('inventory').doc(invId);
+          const invRef = collectionFor(req, 'inventory').doc(invId);
           const invDoc = await t.get(invRef);
           inventoryStates.set(invId, {
             ref: invRef,

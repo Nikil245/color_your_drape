@@ -18,7 +18,12 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if ((decoded.dataScope !== 'real' && decoded.dataScope !== 'demo')
+      || decoded.isDemo !== (decoded.dataScope === 'demo')) {
+      return res.status(401).json({ error: 'Session scope is missing or invalid. Please sign in again.' });
+    }
     req.user = decoded;
+    req.dataScope = decoded.dataScope;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token. Please sign in again.' });
