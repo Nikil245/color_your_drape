@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './SignIn.css';
@@ -54,117 +54,55 @@ const IconError = () => (
   </svg>
 );
 
+/* ─── KPI stat icons ─── */
+const IconOrders = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 01-8 0"/>
+  </svg>
+);
+
+const IconSales = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="12" y1="1" x2="12" y2="23"/>
+    <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+  </svg>
+);
+
+const IconStar = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+/* ─── Feature pill icons ─── */
+const IconInventory = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+  </svg>
+);
+
+const IconPayment = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+    <line x1="1" y1="10" x2="23" y2="10"/>
+  </svg>
+);
+
+const IconReports = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+
 /* ─── Sample KPI values (clearly sample data) ─── */
-const SAMPLE_KPIS = [
-  { label: 'Total Orders', target: 142, suffix: '' },
-  { label: 'Sales (₹)', target: 84600, suffix: '' },
-  { label: 'Pending', target: 12, suffix: '' },
+const SAMPLE_STATS = [
+  { label: 'Total Orders', value: '1.2K+', Icon: IconOrders },
+  { label: 'Total Sales', value: '₹4.8L+', Icon: IconSales },
+  { label: 'Customer Satisfaction', value: '98%', Icon: IconStar },
 ];
-
-/* ─── Count-up hook ─── */
-function useCountUp(target, duration = 1600, delay = 800) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    let startTime = null;
-    let frame;
-    const timeout = setTimeout(() => {
-      const step = (timestamp) => {
-        if (!startTime) startTime = timestamp;
-        const progress = Math.min((timestamp - startTime) / duration, 1);
-        // ease-out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        setValue(Math.round(eased * target));
-        if (progress < 1) frame = requestAnimationFrame(step);
-      };
-      frame = requestAnimationFrame(step);
-    }, delay);
-    return () => {
-      clearTimeout(timeout);
-      cancelAnimationFrame(frame);
-    };
-  }, [target, duration, delay]);
-  return value;
-}
-
-/* ─── Format big numbers nicely ─── */
-function fmt(n) {
-  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  return n.toString();
-}
-
-/* ─── KPI tile component ─── */
-function KpiTile({ label, target, delay }) {
-  const val = useCountUp(target, 1500, delay);
-  return (
-    <div className="preview-kpi">
-      <span className="preview-kpi-value">{label === 'Sales (₹)' ? '₹' : ''}{fmt(val)}</span>
-      <span className="preview-kpi-label">{label}</span>
-    </div>
-  );
-}
-
-/* ─── Trend line SVG ─── */
-function TrendLine() {
-  // Simple upward-trending polyline as a path
-  const points = "0,34 40,28 80,32 120,20 160,24 200,12 240,16 280,6";
-  return (
-    <div className="preview-chart">
-      <svg viewBox="0 0 280 40" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#C9A227" stopOpacity="0.5"/>
-            <stop offset="100%" stopColor="#C9A227" stopOpacity="0"/>
-          </linearGradient>
-        </defs>
-        {/* Area fill */}
-        <polygon
-          className="preview-trend-area"
-          points={`0,40 ${points} 280,40`}
-        />
-        {/* Animated line */}
-        <polyline
-          className="preview-trend-line"
-          points={points}
-        />
-      </svg>
-    </div>
-  );
-}
-
-/* ─── Paisley / silk-wave SVG pattern ─── */
-function PaisleyPattern() {
-  return (
-    <svg className="signin-pattern" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <pattern id="paisley" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-          {/* Simple repeating arc-wave motif */}
-          <path
-            d="M0 40 Q20 10 40 40 Q60 70 80 40"
-            fill="none"
-            stroke="#C9A227"
-            strokeWidth="1.2"
-          />
-          <path
-            d="M0 0 Q20 30 40 0 Q60 -30 80 0"
-            fill="none"
-            stroke="#C9A227"
-            strokeWidth="0.7"
-          />
-          <path
-            d="M0 80 Q20 50 40 80 Q60 110 80 80"
-            fill="none"
-            stroke="#C9A227"
-            strokeWidth="0.7"
-          />
-          {/* Tiny teardrop */}
-          <ellipse cx="40" cy="40" rx="4" ry="7" fill="none" stroke="#C9A227" strokeWidth="0.8"
-            transform="rotate(30, 40, 40)" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#paisley)"/>
-    </svg>
-  );
-}
 
 /* ═══════════════════════════════════════════
    MAIN COMPONENT
@@ -207,20 +145,34 @@ export default function SignIn() {
   };
   // ── End of existing handlers ──
 
+  /* Preload hero image */
+  const [heroLoaded, setHeroLoaded] = useState(false);
+  useEffect(() => {
+    const img = new Image();
+    img.src = '/saree-boutique-hero.jpg';
+    img.onload = () => setHeroLoaded(true);
+    img.onerror = () => setHeroLoaded(true); // still show page
+  }, []);
+
   return (
     <div className="signin-page">
-      {/* ════════════ LEFT PANEL ════════════ */}
+      {/* ════════════ LEFT PANEL — Photographic hero ════════════ */}
       <aside className="signin-left" aria-hidden="true">
-        {/* Gold silk-wave pattern */}
-        <PaisleyPattern />
+        {/* Hero background photograph */}
+        <div className={`signin-hero-bg${heroLoaded ? ' signin-hero-bg--loaded' : ''}`}>
+          <img
+            src="/saree-boutique-hero.jpg"
+            alt="Indian woman wearing magenta silk saree in boutique"
+            className="signin-hero-img"
+            loading="eager"
+          />
+          {/* Dark burgundy overlay for text readability */}
+          <div className="signin-hero-overlay" />
+        </div>
 
-        {/* Floating gradient orbs */}
-        <div className="signin-orb signin-orb-1" />
-        <div className="signin-orb signin-orb-2" />
-
-        {/* Inner content */}
+        {/* Content on top of hero */}
         <div className="signin-left-content">
-          {/* Wordmark */}
+          {/* Brand wordmark */}
           <div className="signin-wordmark">
             <img
               src="/logo.png"
@@ -234,70 +186,54 @@ export default function SignIn() {
           </div>
 
           {/* Hero copy */}
-          <div className="signin-hero">
+          <div className="signin-hero-copy">
             <h2 className="signin-headline">
-              Run your saree business<br />
-              like a boutique brand.
+              Run your saree business<br />like a <span className="signin-headline-gold">boutique brand.</span>
             </h2>
+            <div className="signin-headline-rule" />
             <p className="signin-subtext">
-              Orders, inventory, payments and customers from Instagram and WhatsApp — all in one place.
+              Manage orders, inventory, payments and customers
+              from Instagram and WhatsApp — all in one place.
             </p>
+          </div>
 
-            {/* Product preview card */}
-            <div className="signin-preview-wrap">
-              <div className="signin-preview-card" role="presentation">
-                <p className="preview-label">Sample preview · not real data</p>
-
-                {/* KPI tiles */}
-                <div className="preview-kpis">
-                  {SAMPLE_KPIS.map((kpi, i) => (
-                    <KpiTile key={kpi.label} label={kpi.label} target={kpi.target} delay={900 + i * 120} />
-                  ))}
+          {/* Statistics card */}
+          <div className="signin-stats-card">
+            <p className="signin-stats-note">Sample preview · not real data</p>
+            <div className="signin-stats-grid">
+              {SAMPLE_STATS.map(({ label, value, Icon }) => (
+                <div className="signin-stat" key={label}>
+                  <span className="signin-stat-icon"><Icon /></span>
+                  <span className="signin-stat-value">{value}</span>
+                  <span className="signin-stat-label">{label}</span>
                 </div>
-
-                {/* Trend line */}
-                <TrendLine />
-
-                {/* Low-stock chip */}
-                <div className="preview-chip">
-                  <span className="preview-chip-dot" />
-                  3 items low stock
-                </div>
-              </div>
+              ))}
             </div>
+          </div>
 
-            {/* Feature pills */}
-            <div className="signin-pills">
-              <span className="signin-pill">
-                {/* Inventory icon */}
-                <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                </svg>
-                Live inventory
-              </span>
-              <span className="signin-pill">
-                {/* Payment icon */}
-                <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                  <line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-                Per-item payments
-              </span>
-              <span className="signin-pill">
-                {/* Reports icon */}
-                <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                </svg>
-                Printable reports
-              </span>
-            </div>
+          {/* Feature pills */}
+          <div className="signin-pills">
+            <span className="signin-pill">
+              <IconInventory />
+              Live Inventory
+            </span>
+            <span className="signin-pill">
+              <IconPayment />
+              Per-item Payments
+            </span>
+            <span className="signin-pill">
+              <IconReports />
+              Printable Reports
+            </span>
           </div>
         </div>
       </aside>
 
-      {/* ════════════ RIGHT PANEL ════════════ */}
+      {/* ════════════ RIGHT PANEL — Login form ════════════ */}
       <main className="signin-right">
+        {/* Subtle decorative pattern */}
+        <div className="signin-right-pattern" aria-hidden="true" />
+
         <div className="signin-form-shell">
           {/* Logo */}
           <div className="signin-right-logo-wrap">
@@ -413,7 +349,6 @@ export default function SignIn() {
           >
             {loading ? 'Starting demo…' : 'Try Demo'}
           </button>
-          <p className="signin-demo-hint">Explore with isolated sample data.</p>
 
           {/* Footer */}
           <div className="signin-trust-new">
